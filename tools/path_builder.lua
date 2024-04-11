@@ -63,7 +63,7 @@ function PathBuilder:update(tick)
     -- perform action
     self.index = self.index + 1
     self.position = action.position
-    -- update our position using the given position function in this instruction
+    -- update our position
     local surface = game.surfaces[config.surface]
 --    surface.set_tiles{
 --        tiles = {name = config.path_tile, position = self.position}
@@ -76,14 +76,21 @@ end
 function PathBuilder:queue_path(position)
     local origin = config.origin
     local path = PathBuilder:new({position = origin, tick = game.tick})
+    -- create a PathBuilder instance
     table.insert(PathBuilder.paths, path)
+    -- keep track of instance for on_tick handler
+
+    -- bresenham.line usage: success, counter = bresenham.line(ox, oy, ex, ey, callback)
+    -- the callback function is passed each tile's position and the current count.
+    -- the callback must return true to continue the path,
+    -- this is how you can say that you've hit something and need to stop the path.
+    -- returns 2 values, a boolean success, and the total tile count number
+    -- if no callback is provided, just returns the total tile count number
     local success, counter = bresenham.line(origin.x, origin.y, position.x, position.y, function( x, y, counter )
         path:add{tick=config.ticks_between_tiles, position={x=x, y=y}}
-        -- table.insert(tiles, {x=x, y=y})
         return true
     end)
-    -- for _, tile in pairs(tiles) do
-    -- end
+    -- counter can be used within the callback above as well to get the count as you go
 end
 
 local function on_tick()
