@@ -78,38 +78,54 @@ function PathBuilder:queue_path(position)
     local x_direction = position.x > 0 and right or left
     local y_direction = position.y > 0 and down or up
     -- get our position functions setup. if a positive x or y, we're heading right or down, respectfully
-    local multiplier = 1
-    -- local remainder_amount = x_tiles > y_tiles and (x_tiles%y_tiles) or (y_tiles%x_tiles)
     local intervals = x_tiles > y_tiles and (x_tiles/y_tiles) or (y_tiles/x_tiles)
+    -- determine on which axis the length is largest
+    -- and divide the larger axis by the smaller to get our ratio
     local remainder = 0
-    -- local remainder_amount = x_tiles > y_tiles and (x_tiles/y_tiles)-math.floor((x_tiles/y_tiles)) or (y_tiles/x_tiles)-math.floor((y_tiles/x_tiles))
+    
     local path = PathBuilder:new({position = {x = 0, y = 0}, tick = game.tick})
+    -- create a new path origin
     if x_tiles > y_tiles then
+        -- if we need more x than y (larger x than y length)
         for n = 1, x_tiles/intervals do
+            -- divide our long side by our ratio to get iteration count
             for i = 1, intervals do
                 path:add{tick=config.ticks_between_tiles, positionfunction=x_direction}
+                -- queue our burst of x axis tiles
                 remainder = remainder + (intervals % 1)
+                -- add our remainder
                 if remainder >= 1 then
                     path:add{tick=config.ticks_between_tiles, positionfunction=x_direction}
+                    -- if remainder is over 1, do another tile in the burst
                     remainder = remainder - 1
+                    -- remove the 1 from our remainder
                 end
             end
             path:add{tick=config.ticks_between_tiles, positionfunction=y_direction}
+            -- queue our other axis
         end
     else
+        -- if we need more y than x (larger y than x length)
         for n = 1, y_tiles/intervals do
+            -- divide our long side by our ratio to get iteration count
             for i = 1, intervals do
                 path:add{tick=config.ticks_between_tiles, positionfunction=y_direction}
+                -- queue our burst of y axis tiles
                 remainder = remainder + (intervals % 1)
+                -- add our remainder
                 if remainder >= 1 then
                     path:add{tick=config.ticks_between_tiles, positionfunction=y_direction}
+                    -- if remainder is over 1, do another tile in the burst
                     remainder = remainder - 1
+                    -- remove the 1 from our remainder
                 end
             end
             path:add{tick=config.ticks_between_tiles, positionfunction=x_direction}
+            -- queue our other axis
         end
     end
     table.insert(PathBuilder.paths, path)
+    -- add our path origin to the global table to be accessed later
     return path
 end
 
@@ -122,6 +138,7 @@ local function on_tick()
 end
 
 local function on_player_created(event)
+    -- teleport player to surface at 0, 0
     local player = game.players[event.player_index]
     player.teleport({0, 0}, game.surfaces['oarc'])
 end
@@ -133,6 +150,7 @@ PathBuilder.events =
 }
 
 PathBuilder.on_init = function()
+    -- setup the surface and tile grid
     local s = game.create_surface('oarc')
     s.generate_with_lab_tiles = true
     s.always_day = true
