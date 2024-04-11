@@ -2,8 +2,7 @@
     "factorio.versions": [
         {
             "name": "fact",
-            "factorioPath": "c:\\Users\\16038\\Documents\\Factorio_x64_1.1.87\\Factorio_1.1.87\\bin\\x64\\factorio.exe",
-            "active": true
+            "factorioPath": "c:\\Users\\16038\\Documents\\Factorio_x64_1.1.87\\Factorio_1.1.87\\bin\\x64\\factorio.exe"
         }
     ],
     "Lua.workspace.library": [
