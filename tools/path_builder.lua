@@ -20,13 +20,12 @@ local config =
 -- local function left(position) return {x=position.x - 1, y=position.y} end
 
 -- returns distance in tiles between 2 positions, will be used to get progress of the paths
-local function get_distance(pos1, pos2)
-    local pos1 = {x = pos1.x or pos1[1], y = pos1.y or pos1[2]}
-    local pos2 = {x = pos2.x or pos2[1], y = pos2.y or pos2[2]}
-    local a = math.abs(pos1.x - pos2.x)
-    local b = math.abs(pos1.y - pos2.y)
-    local c = math.sqrt(a ^ 2 + b ^ 2)
-    return c
+function getDistance(posA, posB)
+    -- Get the length for each of the components x and y
+    local xDist = posB.x - posA.x
+    local yDist = posB.y - posA.y
+
+    return math.sqrt( (xDist ^ 2) + (yDist ^ 2) )
 end
 
 -- round a number 'num' to 'dp' decimal places. default is 0 (whole number)
@@ -66,9 +65,9 @@ function PathBuilder:update(tick)
     self.position = action.position
     -- update our position using the given position function in this instruction
     local surface = game.surfaces[config.surface]
-    surface.set_tiles{
-        tiles = {name = config.path_tile, position = self.position}
-    }
+--    surface.set_tiles{
+--        tiles = {name = config.path_tile, position = self.position}
+--    }
     -- set our tile to finish our instruction
     self.last_tick = self.last_tick + action.tick
     --update our timer
@@ -109,8 +108,8 @@ PathBuilder.events =
 
 PathBuilder.on_init = function()
     -- setup the surface and tile grid
-    local s = game.create_surface('oarc')
-    s.generate_with_lab_tiles = true
+    local s = game.surfaces["oarc"] or game.create_surface('oarc')  -- if running with oarc, use that surface, otherwise create
+    -- s.generate_with_lab_tiles = true
     s.always_day = true
 end
 
