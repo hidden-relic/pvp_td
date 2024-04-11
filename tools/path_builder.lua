@@ -89,7 +89,7 @@ function PathBuilder:queue_path(position)
     local success, counter = bresenham.line(origin.x, origin.y, position.x, position.y, function( x, y, counter )
         path:add{tick=config.ticks_between_tiles, position={x=x, y=y}}
         return true
-    end)
+    end) 
     -- counter can be used within the callback above as well to get the count as you go
 end
 
