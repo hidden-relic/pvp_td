@@ -1,3 +1,5 @@
+local bresenham = require('tools.bresenham')
+
 local PathBuilder =
 {
     paths = {}
@@ -7,14 +9,15 @@ local config =
 {
     surface = 'oarc',
     path_tile = 'landfill',
-    ticks_between_tiles = 1
+    ticks_between_tiles = 1,
+    origin = {x=0, y=0}
 }
 
--- position functions to return a position relative to a position
-local function down(position) return {x=position.x, y=position.y + 1} end
-local function right(position) return {x=position.x + 1, y=position.y} end
-local function up(position) return {x=position.x, y=position.y - 1} end
-local function left(position) return {x=position.x - 1, y=position.y} end
+-- -- position functions to return a position relative to a position
+-- local function down(position) return {x=position.x, y=position.y + 1} end
+-- local function right(position) return {x=position.x + 1, y=position.y} end
+-- local function up(position) return {x=position.x, y=position.y - 1} end
+-- local function left(position) return {x=position.x - 1, y=position.y} end
 
 -- returns distance in tiles between 2 positions, will be used to get progress of the paths
 function getDistance(posA, posB)
@@ -56,10 +59,10 @@ function PathBuilder:update(tick)
     -- get our current instruction
     if tick < action.tick + self.last_tick then return end
     -- is it time to run this instruction yet?
-    
+
     -- perform action
     self.index = self.index + 1
-    self.position = action.positionfunction(self.position)
+    self.position = action.position
     -- update our position using the given position function in this instruction
     local surface = game.surfaces[config.surface]
 --    surface.set_tiles{
@@ -71,61 +74,16 @@ function PathBuilder:update(tick)
 end
 
 function PathBuilder:queue_path(position)
-    local x_tiles = math.abs(position.x)
-    local y_tiles = math.abs(position.y)
-    -- getting our number of steps on each axis. because our origin is 0, 0 we don't have to math
-    local x_direction = position.x > 0 and right or left
-    local y_direction = position.y > 0 and down or up
-    -- get our position functions setup. if a positive x or y, we're heading right or down, respectfully
-    local intervals = x_tiles > y_tiles and (x_tiles/y_tiles) or (y_tiles/x_tiles)
-    -- determine on which axis the length is largest
-    -- and divide the larger axis by the smaller to get our ratio
-    local remainder = 0
-    
-    local path = PathBuilder:new({position = {x = 0, y = 0}, tick = game.tick})
-    -- create a new path origin
-    if x_tiles > y_tiles then
-        -- if we need more x than y (larger x than y length)
-        for n = 1, x_tiles/intervals do
-            -- divide our long side by our ratio to get iteration count
-            for i = 1, intervals do
-                path:add{tick=config.ticks_between_tiles, positionfunction=x_direction}
-                -- queue our burst of x axis tiles
-                remainder = remainder + (intervals % 1)
-                -- add our remainder
-                if remainder >= 1 then
-                    path:add{tick=config.ticks_between_tiles, positionfunction=x_direction}
-                    -- if remainder is over 1, do another tile in the burst
-                    remainder = remainder - 1
-                    -- remove the 1 from our remainder
-                end
-            end
-            path:add{tick=config.ticks_between_tiles, positionfunction=y_direction}
-            -- queue our other axis
-        end
-    else
-        -- if we need more y than x (larger y than x length)
-        for n = 1, y_tiles/intervals do
-            -- divide our long side by our ratio to get iteration count
-            for i = 1, intervals do
-                path:add{tick=config.ticks_between_tiles, positionfunction=y_direction}
-                -- queue our burst of y axis tiles
-                remainder = remainder + (intervals % 1)
-                -- add our remainder
-                if remainder >= 1 then
-                    path:add{tick=config.ticks_between_tiles, positionfunction=y_direction}
-                    -- if remainder is over 1, do another tile in the burst
-                    remainder = remainder - 1
-                    -- remove the 1 from our remainder
-                end
-            end
-            path:add{tick=config.ticks_between_tiles, positionfunction=x_direction}
-            -- queue our other axis
-        end
-    end
+    local origin = config.origin
+    local path = PathBuilder:new({position = origin, tick = game.tick})
     table.insert(PathBuilder.paths, path)
-    -- add our path origin to the global table to be accessed later
-    return path
+    local success, counter = bresenham.line(origin.x, origin.y, position.x, position.y, function( x, y, counter )
+        path:add{tick=config.ticks_between_tiles, position={x=x, y=y}}
+        -- table.insert(tiles, {x=x, y=y})
+        return true
+    end)
+    -- for _, tile in pairs(tiles) do
+    -- end
 end
 
 local function on_tick()
