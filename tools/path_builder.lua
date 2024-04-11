@@ -130,31 +130,4 @@ commands.add_command('createpath', 'test path creation', function(command)
     PathBuilder:queue_path(player.position)
 end)
 
-
-local function getCircle(radius, center)
-    local radius, radius_sq = radius, radius ^ 2
-    local center = center or game.player.position
-    local results = {}
-    local area = {top_left={x=center.x-radius, y=center.y-radius}, bottom_right={x=center.x+radius, y=center.y+radius}}
-    
-    -- game.player.print("\nradius = " .. radius .. "\nradius_sq = " .. radius_sq .. "\ncenter = x" .. center.x .. ", y" .. center.y .. "\narea = x" .. area.top_left.x .. ", y" .. area.top_left.y .. " to x" .. area.bottom_right.x .. ", y" .. area.bottom_right.y)
-    
-    for i = area.top_left.x, area.bottom_right.x, 1 do
-        for j = area.top_left.y, area.bottom_right.y, 1 do
-            local distance = math.floor((center.x - i) ^ 2 + (center.y - j) ^ 2)
-            if ((distance < radius_sq) and
-            (distance > radius_sq-32)) then
-                table.insert(results, {i, j})
-            end
-        end
-    end
-    for _, position in pairs(results) do
-        game.write_file("border_coordinates.lua", serpent.line(position)..'\n', true)
-    end
-end
-
-commands.add_command('getcircle', 'get circle border', function(command)
-    getCircle(5*32, {x=0, y=0})
-end)
-
 return PathBuilder
