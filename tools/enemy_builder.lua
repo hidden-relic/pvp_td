@@ -1,4 +1,7 @@
-local EnemyBuilder = {} 
+local EnemyBuilder =
+{
+    waves = {}
+}
 
 -- usage:
 -- local EnemyBuilder = require('tools.enemy_builder')
@@ -21,6 +24,14 @@ local EnemyBuilder = {}
 -- end
 -- -- this will spawn 10 small biters in a row, 60 ticks apart
 
+local config =
+{
+    surface = 'oarc',
+    ticks_between_enemies = 20,
+    origin = {x=0, y=0},
+    logging = false
+}
+
 -- Initialize 
 function EnemyBuilder:new(definition)
     local obj = {}
@@ -33,7 +44,7 @@ function EnemyBuilder:new(definition)
     return obj
 end
 
-function EnemyBuilder:addbuild(builddata)
+function EnemyBuilder:add(builddata)
     self.actions[#self.actions + 1] = builddata
 end
 
@@ -45,23 +56,55 @@ function EnemyBuilder:update(tick)
     if tick < action.tick + self.last_tick then return end
     
     -- perform action
-    self.position = action.positionfunction(self.position) or self.position
+    self.position = self.position
     self.index = self.index + 1
-    local bug = game.surfaces["oarc"].create_entity{name=action.name, position=self.position, direction=action.direction}
+    local surface = game.surfaces[config.surface]
+    local bug = surface.create_entity{name=action.name, position=self.position, direction=action.direction, force='neutral'}
     bug.set_command
     {
         type = defines.command.compound,
         structure_type = defines.compound_command.return_last, 
         commands = 
         {
-            {type=defines.command.go_to_location, destination={x=self.position.x, y=self.position.y+64}, distraction=defines.distraction.none},
-            {type=defines.command.go_to_location, destination={x=self.position.x+64, y=self.position.y+64}, distraction=defines.distraction.none},
-            {type=defines.command.go_to_location, destination={x=self.position.x+64, y=self.position.y}, distraction=defines.distraction.none},
-            {type=defines.command.go_to_location, destination={x=self.position.x, y=self.position.y}, distraction=defines.distraction.none},
-            --   {type=defines.command.attack, target=game.player.character}
+            {type=defines.command.go_to_location, destination=action.target.position, distraction=defines.distraction.none},
+            {type=defines.command.attack, target=action.target}
         }
     }
+    bug.force = game.forces['enemy']
     self.last_tick = self.last_tick + action.tick
 end
+
+function EnemyBuilder:create_wave(target)
+    local origin = config.origin
+    local wave = EnemyBuilder:new({position = origin, tick = game.tick})
+    -- create an EnemyBuilder instance
+    table.insert(EnemyBuilder.waves, wave)
+    -- keep track of instance for on_tick handler
+    for i = 1, 25 do
+        if target and target.valid then
+            wave:add({name = 'small-biter', tick = config.ticks_between_enemies, target = target})
+        else return end
+    end
+end
+
+commands.add_command('createwave', '', function(command)
+    local player = game.players[command.player_index]
+    if player.selected then
+        EnemyBuilder:create_wave(player.selected)
+    end
+end)
+
+local function on_tick()
+    if #EnemyBuilder.waves > 0 then
+        for _, wave in pairs(EnemyBuilder.waves) do
+            wave:update(game.tick)
+        end
+    end
+end
+
+EnemyBuilder.events =
+{
+    [defines.events.on_tick] = on_tick
+}
 
 return EnemyBuilder
