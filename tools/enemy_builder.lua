@@ -1,4 +1,4 @@
-local EnemyBuilder = {}
+local EnemyBuilder = {} 
 
 -- usage:
 -- local EnemyBuilder = require('tools.enemy_builder')
