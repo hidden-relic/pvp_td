@@ -21,7 +21,7 @@ local EnemyBuilder = {}
 -- end
 -- -- this will spawn 10 small biters in a row, 60 ticks apart
 
-
+-- Initialize 
 function EnemyBuilder:new(definition)
     local obj = {}
     setmetatable(obj, self)
@@ -37,6 +37,8 @@ function EnemyBuilder:addbuild(builddata)
     self.actions[#self.actions + 1] = builddata
 end
 
+-- In:     Tick - tick to up on
+-- Result: Draw a path setup in self
 function EnemyBuilder:update(tick)
     if self.index > #self.actions then return end
     local action = self.actions[self.index]
