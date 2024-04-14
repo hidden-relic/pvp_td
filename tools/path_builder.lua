@@ -1,4 +1,5 @@
 local bresenham = require('tools.bresenham')
+local EnemyBuilder = require('tools.enemy_builder')
 
 local PathBuilder =
 {
@@ -23,13 +24,13 @@ local config =
 }
 
 -- returns distance in tiles between 2 positions, will be used to get progress of the paths
--- function getDistance(posA, posB)
---     -- Get the length for each of the components x and y
---     local xDist = posB.x - posA.x
---     local yDist = posB.y - posA.y
+function getDistance(posA, posB)
+    -- Get the length for each of the components x and y
+    local xDist = posB.x - posA.x
+    local yDist = posB.y - posA.y
     
---     return math.sqrt( (xDist ^ 2) + (yDist ^ 2) )
--- end
+    return math.sqrt( (xDist ^ 2) + (yDist ^ 2) )
+end
 
 -- create a new path object
 function PathBuilder:new(definition)
@@ -40,7 +41,14 @@ function PathBuilder:new(definition)
     obj.index = 1
     obj.position = definition.position
     obj.last_tick = definition.tick
+    obj.target = definition.target
+    obj.wave = false
+    obj.waypoints = {}
     return obj
+end
+
+function PathBuilder:set_waypoints(waypoints)
+    self.waypoints = waypoints
 end
 
 -- add an instruction to the path object's tasks
@@ -50,7 +58,14 @@ end
 
 -- to be used as the handler for on_tick event
 function PathBuilder:update(tick)
-    if self.index > #self.actions then return end
+    if self.index > #self.actions then
+        if self.wave == false then
+            game.print("Out of path, creating enemy wave")
+            local wave = EnemyBuilder:create_wave(self.target, self.waypoints)
+            self.wave = true
+        end
+        return
+    end
     -- are we out of instructions?
     local action = self.actions[self.index]
     -- get our current instruction
@@ -70,17 +85,17 @@ function PathBuilder:update(tick)
     --update our timer
 end
 
-function PathBuilder:get_path(position)
+function PathBuilder:get_path(target)
     local origin = config.origin
     
     local ret = {}
     -- collect tile positions in a table
     
     if config.logging then
-        game.write_file('path_tiles.lua', 'Path from '..serpent.line(origin)..' to '..serpent.line(position)..'\n', true)
+        game.write_file('path_tiles.lua', 'Path from '..serpent.line(origin)..' to '..serpent.line(target.position)..'\n', true)
     end
     
-    local path = PathBuilder:new({position = origin, tick = game.tick})
+    local path = PathBuilder:new({position = origin, tick = game.tick, target = target})
     -- create a PathBuilder instance
     table.insert(PathBuilder.paths, path)
     -- keep track of instance for on_tick handler
@@ -91,28 +106,36 @@ function PathBuilder:get_path(position)
     -- this is how you can say that you've hit something and need to stop the path.
     -- returns 2 values, a boolean success, and the total tile count number
     -- if no callback is provided, just returns the total tile count number
-
-    local success, counter = bresenham.line(origin.x, origin.y, position.x, position.y, function( x, y, counter )
+    
+    local success, counter = bresenham.line(origin.x, origin.y, target.position.x, target.position.y, function( x, y, counter )
         -- checking that the line has not grown past our destination
-        if ((position.x >= origin.x) and (x >= position.x)) then
-            if ((position.y >= origin.y) and (y >= position.y))
-            or ((position.y <= origin.y) and (y <= position.y))
+        if ((target.position.x >= origin.x) and (x >= target.position.x)) then
+            if ((target.position.y >= origin.y) and (y >= target.position.y))
+            or ((target.position.y <= origin.y) and (y <= target.position.y))
             then
                 -- returning false stops the path
                 return false
             end
         end
-        if ((position.x <= origin.x) and (x <= position.x)) then
-            if ((position.y >= origin.y) and (y >= position.y))
-            or ((position.y <= origin.y) and (y <= position.y))
+        if ((target.position.x <= origin.x) and (x <= target.position.x)) then
+            if ((target.position.y >= origin.y) and (y >= target.position.y))
+            or ((target.position.y <= origin.y) and (y <= target.position.y))
             then
                 -- returning false stops the path
                 return false
             end
         end
         
-        -- uncomment if creating the path now, 1 tile at a time
-        -- path:add{tick=config.ticks_between_tiles, position={x=round(x), y=round(y)}}
+        -- adding our build to the queue
+        path:add{tick=config.ticks_between_tiles, position={x=x, y=y}}
+        if math.abs(target.position.x-origin.x) >= math.abs(target.position.y-origin.y) then
+            -- add another tile above to create 2x2
+            path:add{tick=config.ticks_between_tiles, position={x=x, y=y+1}}
+        else
+            -- add another tile to the right to create 2x2
+            path:add{tick=config.ticks_between_tiles, position={x=x+1, y=y}}
+        end
+        
         
         table.insert(ret, {x=x, y=y})
         -- add tile position to table
@@ -120,10 +143,13 @@ function PathBuilder:get_path(position)
         if config.logging then
             game.write_file('path_tiles.lua', counter..': x'..x..', y'..y..'\n', true)
         end
+        
         -- returning true continues the path
         return true
     end)
     -- counter can be used within the callback above as well to get the count as you go
+    -- store our path
+    path:set_waypoints(ret)
     -- return our table of tile positions
     return ret
 end
@@ -148,6 +174,27 @@ PathBuilder.events =
     [defines.events.on_player_created] = on_player_created
 }
 
+local function getCircle(radius, center, tile)
+    local radius = radius
+    local center = center
+    local results = {}
+    local area = {top_left={x=center.x-radius, y=center.y-radius}, bottom_right={x=center.x+radius, y=center.y+radius}}
+    
+    for i = area.top_left.x, area.bottom_right.x, 1 do
+        for j = area.top_left.y, area.bottom_right.y, 1 do
+            local distance = getDistance(center, {x=i, y=j})
+            if (distance < radius) then
+                if tile then
+                    table.insert(results, {name=tile, position={i, j}})
+                else
+                    table.insert(results, {i, j})
+                end
+            end
+        end
+    end
+    return results
+end
+
 PathBuilder.on_init = function()
     -- setup the surface and tile grid
     local s = game.surfaces["oarc"] or game.create_surface('oarc')  -- if running with oarc, use that surface, otherwise create
@@ -155,6 +202,25 @@ PathBuilder.on_init = function()
     game.write_file('path_tiles.lua', '')
     -- reset the log file
     s.always_day = true
+    s.request_to_generate_chunks(config.origin, 12)
+    s.force_generate_chunk_requests()
+    local gen = s.is_chunk_generated({2, 2})
+    while gen == false do
+        gen = s.is_chunk_generated({2, 2})
+    end
+    
+    local void_tiles = getCircle(10*32, config.origin, 'out-of-map')
+    local center_tiles = getCircle(2*32, config.origin, 'tutorial-grid')
+    
+    s.set_tiles(void_tiles)
+    s.set_tiles(center_tiles)
 end
+
+commands.add_command('createwave', 'hover your cursor on an entity and run this command', function(command)
+    local player = game.players[command.player_index]
+    if player.selected then
+        local waypoints = PathBuilder:get_path(player.selected)
+    end
+end)
 
 return PathBuilder

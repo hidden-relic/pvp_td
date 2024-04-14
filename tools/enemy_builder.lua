@@ -29,6 +29,7 @@ local config =
     surface = 'oarc',
     ticks_between_enemies = 20,
     origin = {x=0, y=0},
+    enemies_in_wave = 5,
     logging = false
 }
 
@@ -41,6 +42,7 @@ function EnemyBuilder:new(definition)
     obj.index = 1
     obj.position = definition.position
     obj.last_tick = definition.tick
+    obj.target = {}
     return obj
 end
 
@@ -60,39 +62,47 @@ function EnemyBuilder:update(tick)
     self.index = self.index + 1
     local surface = game.surfaces[config.surface]
     local bug = surface.create_entity{name=action.name, position=self.position, direction=action.direction, force='neutral'}
+    local waypoint_commands = {}
+    for i = 1, #action.waypoints, 10 do
+        local command =
+        {
+            type=defines.command.go_to_location,
+            destination=action.waypoints[i],
+            distraction=defines.distraction.none
+        }
+        table.insert(waypoint_commands, command)
+    end
+    table.insert(waypoint_commands,
+    {
+        type=defines.command.attack,
+        target=action.target,
+        distraction=defines.distraction.none
+    })
     bug.set_command
     {
         type = defines.command.compound,
         structure_type = defines.compound_command.return_last, 
-        commands = 
-        {
-            {type=defines.command.go_to_location, destination=action.target.position, distraction=defines.distraction.none},
-            {type=defines.command.attack, target=action.target}
-        }
+        commands = waypoint_commands
     }
     bug.force = game.forces['enemy']
     self.last_tick = self.last_tick + action.tick
 end
 
-function EnemyBuilder:create_wave(target)
+function EnemyBuilder:create_wave(target, waypoints)
     local origin = config.origin
     local wave = EnemyBuilder:new({position = origin, tick = game.tick})
     -- create an EnemyBuilder instance
     table.insert(EnemyBuilder.waves, wave)
     -- keep track of instance for on_tick handler
-    for i = 1, 25 do
+    for i = 1, config.enemies_in_wave do
         if target and target.valid then
-            wave:add({name = 'small-biter', tick = config.ticks_between_enemies, target = target})
+            wave:add({name = 'small-biter', tick = config.ticks_between_enemies, target = target, waypoints = waypoints})
+            wave:add({name = 'medium-biter', tick = config.ticks_between_enemies, target = target, waypoints = waypoints})
+            wave:add({name = 'big-biter', tick = config.ticks_between_enemies, target = target, waypoints = waypoints})
+            wave:add({name = 'behemoth-biter', tick = config.ticks_between_enemies, target = target, waypoints = waypoints})
         else return end
     end
 end
-
-commands.add_command('createwave', '', function(command)
-    local player = game.players[command.player_index]
-    if player.selected then
-        EnemyBuilder:create_wave(player.selected)
-    end
-end)
 
 local function on_tick()
     if #EnemyBuilder.waves > 0 then
