@@ -1,4 +1,5 @@
 local td_gui = require('tools.td_gui')
+require ("config")
 
 local EnemyBuilder =
 {
@@ -26,15 +27,7 @@ local EnemyBuilder =
 -- end
 -- -- this will spawn 10 small biters in a row, 60 ticks apart
 
-local config =
-{
-    surface = 'oarc',
-    ticks_between_enemies = 20,
-    ticks_between_waves = 60*2,
-    origin = {x=0, y=0},
-    enemies_in_wave = 5,
-    logging = false
-}
+
 
 -- Initialize 
 function EnemyBuilder:new(definition)
