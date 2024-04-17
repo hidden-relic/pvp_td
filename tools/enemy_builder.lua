@@ -1,3 +1,5 @@
+local td_gui = require('tools.td_gui')
+
 local EnemyBuilder =
 {
     waves = {}
@@ -28,6 +30,7 @@ local config =
 {
     surface = 'oarc',
     ticks_between_enemies = 20,
+    ticks_between_waves = 60*2,
     origin = {x=0, y=0},
     enemies_in_wave = 5,
     logging = false
@@ -42,7 +45,114 @@ function EnemyBuilder:new(definition)
     obj.index = 1
     obj.position = definition.position
     obj.last_tick = definition.tick
+    obj.player = definition.player
     obj.target = {}
+    obj.waypoints = {}
+    obj.wave = 1
+    obj.next_wave_time = 0
+    obj.enemies =
+    {
+        {
+            'small-biter',
+        },
+        {
+            'small-biter',
+            'small-biter'
+        },
+        {
+            'small-biter',
+            'small-biter',
+            'small-biter'
+        },
+        {
+            'small-biter',
+            'small-biter',
+            'small-biter',
+            'small-biter'
+        },
+        {
+            'small-biter',
+            'small-biter',
+            'small-biter',
+            'small-biter',
+            'medium-biter'
+        },
+        {
+            'small-biter',
+            'small-biter',
+            'small-biter',
+            'small-biter',
+            'medium-biter',
+            'medium-biter'
+        },
+        {
+            'small-biter',
+            'small-biter',
+            'small-biter',
+            'small-biter',
+            'medium-biter',
+            'medium-biter',
+            'medium-biter'
+        },
+        {
+            'small-biter',
+            'small-biter',
+            'small-biter',
+            'small-biter',
+            'medium-biter',
+            'medium-biter',
+            'medium-biter',
+            'medium-biter'
+        },
+        {
+            'small-biter',
+            'small-biter',
+            'medium-biter',
+            'medium-biter',
+            'medium-biter',
+            'medium-biter',
+            'big-biter',
+            'big-biter'
+        },
+        {
+            'small-biter',
+            'small-biter',
+            'medium-biter',
+            'medium-biter',
+            'big-biter',
+            'big-biter',
+            'big-biter',
+            'big-biter'
+        },
+        {
+            'small-biter',
+            'small-biter',
+            'medium-biter',
+            'medium-biter',
+            'big-biter',
+            'big-biter',
+            'behemoth-biter',
+            'behemoth-biter'
+        },
+        {
+            'small-biter',
+            'small-biter',
+            'small-biter',
+            'small-biter',
+            'medium-biter',
+            'medium-biter',
+            'medium-biter',
+            'medium-biter',
+            'big-biter',
+            'big-biter',
+            'big-biter',
+            'big-biter',
+            'behemoth-biter',
+            'behemoth-biter',
+            'behemoth-biter',
+            'behemoth-biter'
+        }
+    }
     return obj
 end
 
@@ -88,19 +198,98 @@ function EnemyBuilder:update(tick)
     self.last_tick = self.last_tick + action.tick
 end
 
-function EnemyBuilder:create_wave(target, waypoints)
+function EnemyBuilder:set_enemies(enemies)
+    self.enemies = enemies
+end
+
+function EnemyBuilder:get_enemies()
+    return self.enemies
+end
+
+function EnemyBuilder:set_wave(wave)
+    self.wave = wave
+end
+
+function EnemyBuilder:get_wave()
+    return self.wave
+end
+
+function EnemyBuilder:set_tick(tick)
+    self.last_tick = tick
+end
+
+function EnemyBuilder:get_tick()
+    return self.last_tick
+end
+
+function EnemyBuilder:set_next_wave_time(tick)
+    self.next_wave_time = tick
+end
+
+function EnemyBuilder:get_next_wave_time()
+    return self.next_wave_time
+end
+
+function EnemyBuilder:set_target(target)
+    self.target = target
+end
+
+function EnemyBuilder:get_target()
+    return self.target
+end
+
+function EnemyBuilder:set_waypoints(waypoints)
+    self.waypoints = waypoints
+end
+
+function EnemyBuilder:get_waypoints()
+    return self.waypoints
+end
+
+function EnemyBuilder:set_player(player)
+    self.player = player
+end
+
+function EnemyBuilder:get_player()
+    return self.player
+end
+
+function EnemyBuilder:create_wave(target, waypoints, player, wave)
     local origin = config.origin
-    local wave = EnemyBuilder:new({position = origin, tick = game.tick})
+    local wave = wave or EnemyBuilder:new({position = origin, tick = game.tick, player = player})
+    wave:set_target(target)
+    wave:set_waypoints(waypoints)
+    local enemies = wave:get_enemies()
+    local wave_ticks = 0
+    -- wave:set_tick(game.tick+wave_ticks)
     -- create an EnemyBuilder instance
     table.insert(EnemyBuilder.waves, wave)
     -- keep track of instance for on_tick handler
+    
+    if config.logging then
+        game.write_file('waves.lua', 'Wave '..wave:get_wave()..'\n', true)
+    end
+    local wave_label = td_gui.get_label(player)
+    wave_label.caption = 'Wave '..wave:get_wave()
+    -- game.print('Wave [color=red]'..wave:get_wave()..'[/color] @'..game.tick)
+    
     for i = 1, config.enemies_in_wave do
-        if target and target.valid then
-            wave:add({name = 'small-biter', tick = config.ticks_between_enemies, target = target, waypoints = waypoints})
-            wave:add({name = 'medium-biter', tick = config.ticks_between_enemies, target = target, waypoints = waypoints})
-            wave:add({name = 'big-biter', tick = config.ticks_between_enemies, target = target, waypoints = waypoints})
-            wave:add({name = 'behemoth-biter', tick = config.ticks_between_enemies, target = target, waypoints = waypoints})
-        else return end
+        for _, enemy in pairs(enemies[wave:get_wave()]) do
+            if wave:get_target() and wave:get_target().valid then
+                if config.logging then
+                    game.write_file('waves.lua', enemy..' @'..game.tick..'\n', true)
+                end
+                wave:add({name = enemy, tick = config.ticks_between_enemies, target = wave:get_target(), waypoints = wave:get_waypoints(), player = wave:get_player()})
+                wave_ticks = wave_ticks + config.ticks_between_enemies
+            else return end
+        end
+    end
+    wave:set_wave(wave:get_wave()+1)
+    if #wave:get_enemies() >= wave:get_wave() then
+        wave:set_next_wave_time(game.tick+wave_ticks+config.ticks_between_waves)
+        if config.logging then
+            game.write_file('waves.lua', 'Next wave time: '..wave:get_next_wave_time()..'\n', true)
+        end
     end
 end
 
@@ -108,6 +297,10 @@ local function on_tick()
     if #EnemyBuilder.waves > 0 then
         for _, wave in pairs(EnemyBuilder.waves) do
             wave:update(game.tick)
+            if (wave:get_next_wave_time() > 0) and (game.tick >= wave:get_next_wave_time()) then
+                wave:set_next_wave_time(0)
+                EnemyBuilder:create_wave(wave:get_target(), wave:get_waypoints(), wave:get_player(), wave)
+            end
         end
     end
 end

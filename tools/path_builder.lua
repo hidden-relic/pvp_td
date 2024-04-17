@@ -3,7 +3,8 @@ local EnemyBuilder = require('tools.enemy_builder')
 
 local PathBuilder =
 {
-    paths = {}
+    paths = {},
+    origin_generated = false
 }
 
 -- create a path builder instance:
@@ -17,14 +18,14 @@ local config =
 {
     surface = 'oarc',
     path_tile = 'landfill',
-    ticks_between_tiles = 5,
+    ticks_between_tiles = 1,
     origin = {x=0, y=0},
     logging = false
     -- will log "origin xy to destination xy" and all the tile positions between for each new line
 }
 
 -- returns distance in tiles between 2 positions, will be used to get progress of the paths
-function getDistance(posA, posB)
+local function getDistance(posA, posB)
     -- Get the length for each of the components x and y
     local xDist = posB.x - posA.x
     local yDist = posB.y - posA.y
@@ -33,36 +34,36 @@ function getDistance(posA, posB)
 end
 
 -- create a new path object
-function PathBuilder:new(definition)
+function PathBuilder.create_path(definition)
     local obj = {}
-    setmetatable(obj, self)
-    self.__index = self
     obj.actions = {}
     obj.index = 1
     obj.position = definition.position
     obj.last_tick = definition.tick
     obj.target = definition.target
-    obj.wave = false
+    obj.wave_enabled = false
+    obj.wave = 0
     obj.waypoints = {}
     return obj
 end
 
-function PathBuilder:set_waypoints(waypoints)
-    self.waypoints = waypoints
+function PathBuilder.get_waypoints(path)
+    return waypoints = waypoints
 end
 
 -- add an instruction to the path object's tasks
-function PathBuilder:add(data)
-    self.actions[#self.actions + 1] = data
+function PathBuilder.queue(path, data)
+    path.actions[#path.actions + 1] = data
 end
 
 -- to be used as the handler for on_tick event
 function PathBuilder:update(tick)
     if self.index > #self.actions then
-        if self.wave == false then
-            game.print("Out of path, creating enemy wave")
-            local wave = EnemyBuilder:create_wave(self.target, self.waypoints)
-            self.wave = true
+        if self.wave_enabled == false then
+            game.print('Path is complete for '..self.player.name)
+            self.wave_enabled = true
+            game.print({'', 'Creating a wave targetting ', self.target.localised_name})
+            local wave = EnemyBuilder:create_wave(self.target, self.waypoints, self.player)
         end
         return
     end
@@ -85,7 +86,7 @@ function PathBuilder:update(tick)
     --update our timer
 end
 
-function PathBuilder:get_path(target)
+function PathBuilder:get_path(target, player)
     local origin = config.origin
     
     local ret = {}
@@ -95,7 +96,8 @@ function PathBuilder:get_path(target)
         game.write_file('path_tiles.lua', 'Path from '..serpent.line(origin)..' to '..serpent.line(target.position)..'\n', true)
     end
     
-    local path = PathBuilder:new({position = origin, tick = game.tick, target = target})
+    game.print('Creating a new PathBuilder instance for '..player.name)
+    local path = PathBuilder:new({position = origin, tick = game.tick, target = target, player = player})
     -- create a PathBuilder instance
     table.insert(PathBuilder.paths, path)
     -- keep track of instance for on_tick handler
@@ -128,16 +130,18 @@ function PathBuilder:get_path(target)
         
         -- adding our build to the queue
         path:add{tick=config.ticks_between_tiles, position={x=x, y=y}}
+        table.insert(ret, {x=x, y=y})
         if math.abs(target.position.x-origin.x) >= math.abs(target.position.y-origin.y) then
             -- add another tile above to create 2x2
             path:add{tick=config.ticks_between_tiles, position={x=x, y=y+1}}
+            table.insert(ret, {x=x, y=y+1})
         else
             -- add another tile to the right to create 2x2
             path:add{tick=config.ticks_between_tiles, position={x=x+1, y=y}}
+            table.insert(ret, {x=x+1, y=y})
         end
         
         
-        table.insert(ret, {x=x, y=y})
         -- add tile position to table
         
         if config.logging then
@@ -153,26 +157,6 @@ function PathBuilder:get_path(target)
     -- return our table of tile positions
     return ret
 end
-
-local function on_tick()
-    if #PathBuilder.paths > 0 then
-        for _, path in pairs(PathBuilder.paths) do
-            path:update(game.tick)
-        end
-    end
-end
-
-local function on_player_created(event)
-    -- teleport player to surface at 0, 0
-    local player = game.players[event.player_index]
-    player.teleport({0, 0}, game.surfaces['oarc'])
-end
-
-PathBuilder.events =
-{
-    [defines.events.on_tick] = on_tick,
-    [defines.events.on_player_created] = on_player_created
-}
 
 local function getCircle(radius, center, tile)
     local radius = radius
@@ -195,31 +179,72 @@ local function getCircle(radius, center, tile)
     return results
 end
 
+local function on_tick()
+    if #PathBuilder.paths > 0 then
+        for _, path in pairs(PathBuilder.paths) do
+            path:update(game.tick)
+        end
+    end
+end
+
+
+
+local function on_player_created(event)
+    -- teleport player to surface at 0, 0
+    local player = game.players[event.player_index]
+    local posx = math.random(-10*32, 10*32)
+    local posy = math.random(-10*32, 10*32)
+    while getDistance({x=posx, y=posy}, {x=0, y=0}) <= 10*32 do
+        posx = math.random(-10*32, 10*32)
+        posy = math.random(-10*32, 10*32)
+    end
+    if getDistance({x=posx, y=posy}, {x=0, y=0}) > 10*32 then
+        player.teleport({x=posx, y=posy}, game.surfaces['oarc'])
+    end
+end
+
+local on_nth_tick = function()
+    if PathBuilder.origin_generated then return end
+    local s = game.surfaces['oarc']
+    if s.is_chunk_generated({2, 2}) then
+        local void_tiles = getCircle(10*32, config.origin, 'out-of-map')
+        local center_tiles = getCircle(2*32, config.origin, 'tutorial-grid')
+        
+        s.set_tiles(void_tiles)
+        s.set_tiles(center_tiles)
+        PathBuilder.origin_generated = true
+    end
+end
+
+PathBuilder.events =
+{
+    [defines.events.on_tick] = on_tick,
+    [defines.events.on_player_created] = on_player_created
+}
+
+PathBuilder.on_nth_tick =
+{
+    [30] = on_nth_tick
+}
+
+
 PathBuilder.on_init = function()
     -- setup the surface and tile grid
     local s = game.surfaces["oarc"] or game.create_surface('oarc')  -- if running with oarc, use that surface, otherwise create
     -- s.generate_with_lab_tiles = true
     game.write_file('path_tiles.lua', '')
+    game.write_file('waves.lua', '')
     -- reset the log file
     s.always_day = true
     s.request_to_generate_chunks(config.origin, 12)
     s.force_generate_chunk_requests()
-    local gen = s.is_chunk_generated({2, 2})
-    while gen == false do
-        gen = s.is_chunk_generated({2, 2})
-    end
-    
-    local void_tiles = getCircle(10*32, config.origin, 'out-of-map')
-    local center_tiles = getCircle(2*32, config.origin, 'tutorial-grid')
-    
-    s.set_tiles(void_tiles)
-    s.set_tiles(center_tiles)
 end
 
 commands.add_command('createwave', 'hover your cursor on an entity and run this command', function(command)
     local player = game.players[command.player_index]
     if player.selected then
-        local waypoints = PathBuilder:get_path(player.selected)
+        game.print({'', 'Creating Path to ', player.selected.localised_name})
+        PathBuilder:get_path(player.selected, player)
     end
 end)
 
