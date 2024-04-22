@@ -1,4 +1,4 @@
-local td_gui = require('tools.td_gui')
+-- local td_gui = require('tools.td_gui')
 
 local EnemyBuilder =
 {
@@ -269,8 +269,7 @@ function EnemyBuilder:create_wave(target, waypoints, player, wave)
     if config.logging then
         game.write_file('waves.lua', 'Wave '..wave:get_wave()..'\n', true)
     end
-    local wave_label = td_gui.get_label(player)
-    wave_label.caption = 'Wave '..wave:get_wave()
+
     -- game.print('Wave [color=red]'..wave:get_wave()..'[/color] @'..game.tick)
     
     for i = 1, config.enemies_in_wave do
