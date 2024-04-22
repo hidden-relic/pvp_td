@@ -1,3 +1,4 @@
+require ("config")
 local bresenham = require('tools.bresenham')
 local EnemyBuilder = require('tools.enemy_builder')
 
@@ -10,15 +11,6 @@ local PathBuilder = {origin_generated = false}
 -- queue a tile in the builder
 -- -- path:add{tick=config.ticks_between_tiles, position={x=tile.x, y=tile.y}}
 
-local config =
-{
-    surface = 'oarc',
-    path_tile = 'landfill',
-    ticks_between_tiles = 1,
-    origin = {x=0, y=0},
-    logging = false
-    -- will log "origin xy to destination xy" and all the tile positions between for each new line
-}
 
 -- returns distance in tiles between 2 positions, will be used to get progress of the paths
 local function getDistance(posA, posB)
@@ -203,7 +195,7 @@ local function on_player_created(event)
         posy = math.random(-10*32, 10*32)
     end
     if getDistance({x=posx, y=posy}, {x=0, y=0}) > 10*32 then
-        player.teleport({x=posx, y=posy}, game.surfaces['oarc'])
+        player.teleport({x=posx, y=posy}, game.surfaces[config.surface])
     end
 end
 
@@ -235,7 +227,7 @@ PathBuilder.on_nth_tick =
 PathBuilder.on_init = function()
     global.paths = {}
     -- setup the surface and tile grid
-    local s = game.surfaces["oarc"] or game.create_surface('oarc')  -- if running with oarc, use that surface, otherwise create
+    local s = game.surfaces[config.surface] or game.create_surface(config.surface)  -- if running with oarc, use that surface, otherwise create
     -- s.generate_with_lab_tiles = true
     game.write_file('path_tiles.lua', '')
     game.write_file('waves.lua', '')
