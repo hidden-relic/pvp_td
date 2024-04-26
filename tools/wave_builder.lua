@@ -105,7 +105,7 @@ WaveControl.on_init = function()
     global.td_groups = {}
 end
 
-commands.add_command("creategroup", "/creategroup wave_index multiplier\nRefer to wave_config.lua", function(command)
+commands.add_command("creategroup", "/creategroup wave_index multiplier\nRefer to wave_config.lua\nRunning with no arguments creates Wave 1\n/creategroup 3 2 would create Wave 3 with double the enemies\n/creategroup medium-biter 5 would create 5 medium biters", function(command)
     local player = game.players[command.player_index]
     if not player.admin then
         player.print('You are not admin')
