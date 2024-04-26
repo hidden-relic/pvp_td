@@ -1,6 +1,6 @@
-require ("config")
+local config = require ('config')
 local bresenham = require('tools.bresenham')
-local EnemyBuilder = require('tools.enemy_builder')
+-- local EnemyBuilder = require('tools.enemy_builder')
 
 local PathBuilder = {origin_generated = false}
 
@@ -60,7 +60,7 @@ function PathBuilder.update(tick)
                 game.print('Path '..i..' is complete')
                 path.wave_enabled = true
                 game.print({'', 'Creating a wave targetting ', path.target.localised_name})
-                local wave = EnemyBuilder:create_wave(path.target, path.waypoints, path.player)
+                -- local wave = EnemyBuilder:create_wave(path.target, path.waypoints, path.player)
             end
             return
         end
@@ -237,7 +237,7 @@ PathBuilder.on_init = function()
     s.force_generate_chunk_requests()
 end
 
-commands.add_command('createwave', 'hover your cursor on an entity and run this command', function(command)
+commands.add_command('createpath', 'hover your cursor on an entity and run this command', function(command)
     local player = game.players[command.player_index]
     if player.selected then
         game.print({'', 'Creating Path to ', player.selected.localised_name})

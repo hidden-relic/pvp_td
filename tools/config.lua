@@ -9,3 +9,5 @@ local config =
     ticks_between_tiles = 1,
     logging = false         -- will log "origin xy to destination xy" and all the tile positions between for each new line
 }
+
+return config
