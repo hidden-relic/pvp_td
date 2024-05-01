@@ -134,10 +134,14 @@ function PathBuilder.new_path(target)
             -- add another tile above to create 2x2
             PathBuilder.queue(path, {tick=config.ticks_between_tiles, position={x=x, y=y+1}})
             table.insert(ret, {x=x, y=y+1})
+            PathBuilder.queue(path, {tick=config.ticks_between_tiles, position={x=x, y=y-1}})
+            table.insert(ret, {x=x, y=y-1})
         else
             -- add another tile to the right to create 2x2
             PathBuilder.queue(path, {tick=config.ticks_between_tiles, position={x=x+1, y=y}})
             table.insert(ret, {x=x+1, y=y})
+            PathBuilder.queue(path, {tick=config.ticks_between_tiles, position={x=x-1, y=y}})
+            table.insert(ret, {x=x-1, y=y})
         end
         
         

@@ -1,14 +1,14 @@
 local config =
 {
-    ['small-biter'] = {['small-biter'] = 1},
-    ['medium-biter'] = {['medium-biter'] = 1},
-    ['big-biter'] = {['big-biter'] = 1},
-    ['behemoth-biter'] = {['behemoth-biter'] = 1},
-    [1] = {['small-biter'] = 10},
-    [2] = {['small-biter'] = 10, ['medium-biter'] = 5},
-    [3] = {['medium-biter'] = 10, ['big-biter'] = 5},
-    [4] = {['big-biter'] = 10, ['behemoth-biter'] = 1},
-    [5] = {['behemoth-biter'] = 10},
+    ['small-biter'] = {{name='small-biter', count = 1, tick = 0}},
+    ['medium-biter'] = {{name='medium-biter', count = 1, tick = 0}},
+    ['big-biter'] = {{name='big-biter', count = 1, tick = 0}},
+    ['behemoth-biter'] = {{name='behemoth-biter', count = 1, tick = 0}},
+    [1] = {{name='small-biter', count = 10, tick = 0}},
+    [2] = {{name='small-biter', count = 10, tick = 0}, {name='medium-biter', count = 5, tick = 0}},
+    [3] = {{name='medium-biter', count = 10, tick = 0}, {name='big-biter', count = 5, tick = 0}},
+    [4] = {{name='big-biter', count = 10, tick = 0}, {name='behemoth-biter', count = 1, tick = 0}},
+    [5] = {{name='behemoth-biter', count = 10, tick = 0}},
 }
 
 return config
