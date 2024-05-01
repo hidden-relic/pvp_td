@@ -7,6 +7,56 @@ local WaveControl = {}
 -- WaveControl.create_wave(wave_index, multiplier)
 -- WaveControl.move_and_attack(group, positions)
 
+
+function WaveControl.create_wave_obj(definition)
+    local obj = {}
+    obj.actions = {}
+    obj.index = 1
+    obj.last_tick = definition.tick
+    obj.group = definition.group
+    return obj
+end
+
+-- add an instruction to the wave object's tasks
+function WaveControl.queue(wave, data)
+    wave.actions[#wave.actions + 1] = data
+end
+
+-- to be used as the handler for on_tick event
+function WaveControl.update(tick)
+    local waves = global.waves
+    for i, wave in pairs(waves) do
+        if wave.index > #wave.actions then
+            table.remove(global.waves, wave.g_index)
+            return
+        end
+        -- are we out of instructions?
+        local action = wave.actions[wave.index]
+        
+        -- get our current instruction
+        if tick < action.tick + wave.last_tick then return end
+        -- is it time to run this instruction yet?
+        
+        -- perform action
+        wave.index = wave.index + 1
+        -- update our position
+        local surface = game.surfaces[config.surface]
+        if wave.group and wave.group.valid then
+            local bug = surface.create_entity{name = action.name, position = config.origin}
+            if bug and bug.valid then
+                bug.ai_settings.allow_destroy_when_commands_fail = false
+                bug.ai_settings.allow_try_return_to_spawner = false
+                wave.group.add_member(bug)
+            end
+        else
+            game.print("Wave's group is nil or invalid at action "..wave.index..". Possibly dead? (reference to the wave: global.waves["..i.."])")
+        end
+        -- set our tile to finish our instruction
+        wave.last_tick = wave.last_tick + action.tick
+        --update our timer
+    end
+end
+
 function WaveControl.create_wave(wave_index, multiplier)
     -- refer to wave_config for pre-made enemy waves that use a numeric index (wave number)
     -- you may also use a bug's name as the index to create a wave of just that bug type
@@ -15,19 +65,27 @@ function WaveControl.create_wave(wave_index, multiplier)
     
     local surface = game.surfaces[config.surface]
     local group = surface.create_unit_group{position=config.origin}
+    
+    -- here we plug in our enemy table
     local enemies = wave_config[wave_index or 1]
+    
+    -- create new 'wave' object to keep track of in on_tick
+    table.insert(global.waves, WaveControl.create_wave_obj{tick=game.tick, group=group})
+    local wave = global.waves[#global.waves]
+    wave.g_index = #global.waves
     
     for index, enemy in pairs(enemies) do
         for i = 1, enemies[index].count do
             for m = 1, (multiplier or 1) do
-                local bug = surface.create_entity{name = enemies[index].name, position = config.origin}
-                if bug and bug.valid then
-                    bug.ai_settings.allow_destroy_when_commands_fail = false
-                    bug.ai_settings.allow_try_return_to_spawner = false
-                    if group and group.valid then
-                        group.add_member(bug)
-                    end
-                end
+                WaveControl.queue(wave, {tick=enemies[index].tick, name=enemies[index].name})
+                -- local bug = surface.create_entity{name = enemies[index].name, position = config.origin}
+                -- if bug and bug.valid then
+                --     bug.ai_settings.allow_destroy_when_commands_fail = false
+                --     bug.ai_settings.allow_try_return_to_spawner = false
+                --     if group and group.valid then
+                --         group.add_member(bug)
+                --     end
+                -- end
             end
         end
     end
@@ -92,17 +150,25 @@ function WaveControl.move_and_attack(group, positions, target)
         structure_type = defines.compound_command.return_last,
         commands = waypoint_commands
     }
-
+    
     return waypoint_commands
-end
-
-function WaveControl.get_position(group)
-    return group.position
 end
 
 WaveControl.on_init = function()
     global.td_groups = {}
+    global.waves = {}
 end
+
+local function on_tick()
+    if #global.waves > 0 then
+        WaveControl.update(game.tick)
+    end
+end
+
+WaveControl.events =
+{
+    [defines.events.on_tick] = on_tick
+}
 
 commands.add_command("creategroup", "/creategroup wave_index multiplier\nTarget is the entity you are hovering\nRefer to wave_config.lua\nRunning with no arguments creates Wave 1\n/creategroup 3 2 would create Wave 3 with double the enemies\n/creategroup medium-biter 5 would create 5 medium biters", function(command)
     local player = game.players[command.player_index]
@@ -143,6 +209,5 @@ commands.add_command("creategroup", "/creategroup wave_index multiplier\nTarget 
         player.print('Something happened, no group or group is invalid. Groups are in global.td_groups')
     end
 end)
-
 
 return WaveControl
