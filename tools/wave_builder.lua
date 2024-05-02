@@ -105,6 +105,14 @@ function WaveControl.update(tick)
                     bug.ai_settings.allow_try_return_to_spawner = false
                     wave.group.add_member(bug)
                 end
+                if #wave.group.members == wave.minimum_gathered then
+                    wave.group.set_command
+                    {
+                        type = defines.command.compound,
+                        structure_type = defines.compound_command.return_last,
+                        commands = wave.command
+                    }
+                end
             else
                 game.print("Wave's group is nil or invalid at wave.index "..wave.index..". (reference to the wave: global.waves["..i.."])")
             end
@@ -147,8 +155,8 @@ function WaveControl.create_wave(wave_index, multiplier, ticks)
             game.print('Group now invalid inside wave')
         end
     end
-    -- local wave = global.waves[#global.waves]
     
+    local enemy_count = 0
     for index, enemy in pairs(enemies) do
         for i = 1, enemies[index].count do
             for m = 1, (multiplier or 1) do
@@ -156,21 +164,21 @@ function WaveControl.create_wave(wave_index, multiplier, ticks)
                 -- 'tick' above is a ternary condition
                 -- it says if enemies[i].tick == 0 then use 'ticks' value set above,
                 -- otherwise use what is set in enemies[i].tick
+                enemy_count = enemy_count + 1
             end
         end
     end
+    wave.minimum_gathered = math.floor(enemy_count*config.percent_bugs_created_before_command)
     return group, wave
 end
 
-function WaveControl.move_and_attack(group, positions, target)
-    -- group: LuaUnitGroup
+function WaveControl.move_and_attack(positions, target)
     -- positions: a table. accepts waypoints, so positions should be a table
     -- if just a single move command just supply a table with the single position
     -- target (optional): LuaEntity. must be an entity, not a position
-    -- creates and issues a compound command to the group
+    -- creates and returns a compound command table for a group
     -- will move to all the positions in order
     -- if a target is supplied, an attack command is added to the end
-    -- returns the compound command table
     
     local waypoint_commands = {}
     for i = 1, #positions do
@@ -189,13 +197,13 @@ function WaveControl.move_and_attack(group, positions, target)
             distraction=defines.distraction.none
         })
     end
-    group.set_command
-    {
-        type = defines.command.compound,
-        structure_type = defines.compound_command.return_last,
-        commands = waypoint_commands
-    }
-    
+    -- usage:
+    -- group.set_command
+    -- {
+    --     type = defines.command.compound,
+    --     structure_type = defines.compound_command.return_last,
+    --     commands = WaveControl.move_and_attack(positions, target)
+    -- }
     return waypoint_commands
 end
 
@@ -285,8 +293,7 @@ commands.add_command('testgroups', '', function(command)
             local group, wave = WaveControl.create_wave(j, i)
             if group and group.valid then
                 table.insert(global.td_groups, group)
-                local command = WaveControl.move_and_attack(group, {thing.position}, thing)
-                wave.command = command
+                wave.command = WaveControl.move_and_attack({thing.position}, thing)
             end
         end
     end
@@ -302,7 +309,7 @@ commands.add_command("creategroup", "/creategroup wave_index multiplier\nTarget 
         player.print("Error: hover over position to attack")
         return
     end
-
+    
     local wave_index = 1
     local multiplier = 1
     local ticks = 0
@@ -337,8 +344,7 @@ commands.add_command("creategroup", "/creategroup wave_index multiplier\nTarget 
         if player.selected then
             table.insert(global.td_groups, group)
             group_index = #global.td_groups
-            local command = WaveControl.move_and_attack(group, {player.selected.position}, player.selected)
-            wave.command = command
+            wave.command = WaveControl.move_and_attack({player.selected.position}, player.selected)
             player.print('Group can be accessed via global.td_groups['..group_index..']')
         else
             player.print("Error: hover over position to attack")
