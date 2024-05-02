@@ -7,7 +7,7 @@ local config =
     origin = {x=0, y=0}, -- this may change depending on gametype
     path_tile = 'landfill',
     ticks_between_tiles = 1, -- this should be determined elsewhere, but for now, testing
-    logging = true -- not in use currently
+    logging = false -- not in use currently
 }
 
 return config

@@ -55,15 +55,6 @@ end
 function PathBuilder.update(tick)
     local paths = global.paths
     for i, path in pairs(paths) do
-        if path.index > #path.actions then
-            if path.wave_enabled == false then
-                if config.logging then
-                    game.print('Path '..i..' is complete')
-                end
-                path.wave_enabled = true
-                -- local wave = EnemyBuilder:create_wave(path.target, path.waypoints, path.player)
-            end
-        end
         -- are we out of instructions?
         local action = path.actions[path.index]
         if not action then 
@@ -81,9 +72,21 @@ function PathBuilder.update(tick)
         surface.set_tiles{
             tiles = {name = config.path_tile, position = path.position}
         }
-        -- set our tile to finish our instruction
+        
+        -- animation attempt
+        surface.create_entity{name="cluster-nuke-explosion", position=path.position, target=path.target}
+        -- surface.create_entity{name="atomic-nuke-shockwave", position=path.position, target=game.player.character}
+
         path.last_tick = path.last_tick + action.tick
-        --update our timer
+
+        if path.index > #path.actions then
+            -- if no more tiles for this path, clear it from global table
+            table.insert(global.origins, path.origin)
+            table.remove(global.paths, i)
+            if config.logging then
+                game.print('Path complete. '..#global.paths..' left.')
+            end
+        end
     end
 end
 
@@ -98,6 +101,7 @@ function PathBuilder.new_path(target)
     end
     
     local path = PathBuilder.create_path_obj({position = origin, tick = game.tick, target = target})
+    path.origin = origin
     table.insert(global.paths, path)
     -- create a PathBuilder instance
     
@@ -232,6 +236,7 @@ PathBuilder.on_nth_tick =
 
 PathBuilder.on_init = function()
     global.paths = {}
+    global.origins = {}
     -- setup the surface and tile grid
     local s = game.surfaces[config.surface] or game.create_surface(config.surface)  -- if running with oarc, use that surface, otherwise create
     -- s.generate_with_lab_tiles = true
