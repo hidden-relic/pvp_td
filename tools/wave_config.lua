@@ -1,4 +1,4 @@
-local config =
+local wave_config =
 {
     ['small-biter'] = {['small-biter'] = 1},
     ['medium-biter'] = {['medium-biter'] = 1},
@@ -11,4 +11,4 @@ local config =
     [5] = {['behemoth-biter'] = 10},
 }
 
-return config
+return wave_config

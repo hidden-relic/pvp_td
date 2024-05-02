@@ -5,7 +5,7 @@ local day = hour*24
 
 local chunk_tracker = {}
 
-local config = {
+local chunkConfig = {
     enabled = false,
     entities_chunks = 16,
     pollution_chunks = 32,
@@ -53,8 +53,8 @@ end
 
 local function check_chunk(position, area)
     local surface = game.surfaces[1]
-    local entities_chunks = config.entities_chunks
-    local pollution_chunks = config.pollution_chunks
+    local entities_chunks = chunkConfig.entities_chunks
+    local pollution_chunks = chunkConfig.pollution_chunks
     local forces = {}
     local find_entities = surface.find_entities_filtered
     local get_pollution = surface.get_pollution
@@ -98,7 +98,7 @@ local function check_chunk(position, area)
         -- in case this chunk was already in the list, lets check how long its been there
         -- if past the expiration time, let's delete the chunk
         if chunk_tracker[px][py] then
-            if (game.tick - chunk_tracker[px][py]) > config.time_until_removal then
+            if (game.tick - chunk_tracker[px][py]) > chunkConfig.time_until_removal then
                 surface.delete_chunk(position)
                 chunk_tracker[px][py] = nil
                 return position
@@ -142,8 +142,8 @@ end
 local events =
 {
 [on_chunk_generated] = function(event)
-    if config.enabled then
-        if get_table_count(chunk_tracker) >= config.max_chunks_to_track then return end
+    if chunkConfig.enabled then
+        if get_table_count(chunk_tracker) >= chunkConfig.max_chunks_to_track then return end
         local surface = event.surface
         local position = event.position
         local area = event.area
@@ -151,8 +151,8 @@ local events =
     end
 end,
 
-[on_nth_tick(config.time_between_scans)] = function()
-    if config.enabled then
+[on_nth_tick(chunkConfig.time_between_scans)] = function()
+    if chunkConfig.enabled then
         local t = {}
         local xs = generate_key_list(chunk_tracker)
         for _, x in pairs(xs) do
