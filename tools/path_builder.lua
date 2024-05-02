@@ -57,9 +57,10 @@ function PathBuilder.update(tick)
     for i, path in pairs(paths) do
         if path.index > #path.actions then
             if path.wave_enabled == false then
-                game.print('Path '..i..' is complete')
+                if config.logging then
+                    game.print('Path '..i..' is complete')
+                end
                 path.wave_enabled = true
-                game.print({'', 'Creating a wave targetting ', path.target.localised_name})
                 -- local wave = EnemyBuilder:create_wave(path.target, path.waypoints, path.player)
             end
             return
@@ -94,7 +95,6 @@ function PathBuilder.new_path(target)
         game.write_file('path_tiles.lua', 'Path from '..serpent.line(origin)..' to '..serpent.line(target.position)..'\n', true)
     end
     
-    game.print('Creating a new PathBuilder instance')
     local path = PathBuilder.create_path_obj({position = origin, tick = game.tick, target = target})
     table.insert(global.paths, path)
     -- create a PathBuilder instance
@@ -234,17 +234,21 @@ PathBuilder.on_init = function()
     local s = game.surfaces[config.surface] or game.create_surface(config.surface)  -- if running with oarc, use that surface, otherwise create
     -- s.generate_with_lab_tiles = true
     game.write_file('path_tiles.lua', '')
-    game.write_file('waves.lua', '')
     -- reset the log file
     s.always_day = true
     s.request_to_generate_chunks(config.origin, 12)
     s.force_generate_chunk_requests()
+    -- local mgs = s.map_gen_settings
+    s.map_gen_settings.width = 1000
+    s.map_gen_settings.height = 1000
 end
 
 commands.add_command('createpath', 'hover your cursor on an entity and run this command', function(command)
     local player = game.players[command.player_index]
     if player.selected then
+        if config.logging then
         game.print({'', 'Creating Path to ', player.selected.localised_name})
+        end
         PathBuilder.new_path(player.selected)
     end
 end)
