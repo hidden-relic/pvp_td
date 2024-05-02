@@ -17,10 +17,10 @@ local config =
     -- meant for creating pre-defined waves
     -- also mostly for testing, we've decided to use an algorithm later
     [1] = {{name='small-biter', count = 10, tick = 60}},
-    [2] = {{name='small-biter', count = 10, tick = 0}, {name='medium-biter', count = 5, tick = 60}},
+    [2] = {{name='small-biter', count = 10, tick = 60}, {name='medium-biter', count = 5, tick = 60}},
     [3] = {{name='medium-biter', count = 10, tick = 60}, {name='big-biter', count = 5, tick = 120}},
-    [4] = {{name='big-biter', count = 10, tick = 0}, {name='behemoth-biter', count = 1, tick = 0}},
-    [5] = {{name='behemoth-biter', count = 10, tick = 0}},
+    [4] = {{name='big-biter', count = 10, tick = 60}, {name='behemoth-biter', count = 1, tick = 60}},
+    [5] = {{name='behemoth-biter', count = 10, tick = 60}},
 }
 
 return config

@@ -194,11 +194,11 @@ local function on_player_created(event)
     local player = game.players[event.player_index]
     local posx = math.random(-10*32, 10*32)
     local posy = math.random(-10*32, 10*32)
-    while getDistance({x=posx, y=posy}, {x=0, y=0}) <= 10*32 do
+    while getDistance({x=posx, y=posy}, {x=0, y=0}) <= 11*32 do
         posx = math.random(-10*32, 10*32)
         posy = math.random(-10*32, 10*32)
     end
-    if getDistance({x=posx, y=posy}, {x=0, y=0}) > 10*32 then
+    if getDistance({x=posx, y=posy}, {x=0, y=0}) > 11*32 then
         player.teleport({x=posx, y=posy}, game.surfaces[config.surface])
     end
 end

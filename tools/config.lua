@@ -1,6 +1,7 @@
 local config =
 {
     surface = 'oarc',
+    enemy_force = 'creeps',
     ticks_between_waves = 60*2, -- not in use currently
     origin = {x=0, y=0}, -- this may change depending on gametype
     path_tile = 'landfill',
