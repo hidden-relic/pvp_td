@@ -1,13 +1,12 @@
 local config =
 {
     surface = 'oarc',
-    ticks_between_enemies = 20,
-    ticks_between_waves = 60*2,
-    origin = {x=0, y=0},
-    enemies_in_wave = 5,
+    enemy_force = 'creeps',
+    ticks_between_waves = 60*2, -- not in use currently
+    origin = {x=0, y=0}, -- this may change depending on gametype
     path_tile = 'landfill',
-    ticks_between_tiles = 1,
-    logging = false         -- will log "origin xy to destination xy" and all the tile positions between for each new line
+    ticks_between_tiles = 1, -- this should be determined elsewhere, but for now, testing
+    logging = true -- not in use currently
 }
 
 return config

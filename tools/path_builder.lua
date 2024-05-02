@@ -57,9 +57,10 @@ function PathBuilder.update(tick)
     for i, path in pairs(paths) do
         if path.index > #path.actions then
             if path.wave_enabled == false then
-                game.print('Path '..i..' is complete')
+                if config.logging then
+                    game.print('Path '..i..' is complete')
+                end
                 path.wave_enabled = true
-                game.print({'', 'Creating a wave targetting ', path.target.localised_name})
                 -- local wave = EnemyBuilder:create_wave(path.target, path.waypoints, path.player)
             end
             return
@@ -94,7 +95,6 @@ function PathBuilder.new_path(target)
         game.write_file('path_tiles.lua', 'Path from '..serpent.line(origin)..' to '..serpent.line(target.position)..'\n', true)
     end
     
-    game.print('Creating a new PathBuilder instance')
     local path = PathBuilder.create_path_obj({position = origin, tick = game.tick, target = target})
     table.insert(global.paths, path)
     -- create a PathBuilder instance
@@ -134,10 +134,14 @@ function PathBuilder.new_path(target)
             -- add another tile above to create 2x2
             PathBuilder.queue(path, {tick=config.ticks_between_tiles, position={x=x, y=y+1}})
             table.insert(ret, {x=x, y=y+1})
+            PathBuilder.queue(path, {tick=config.ticks_between_tiles, position={x=x, y=y-1}})
+            table.insert(ret, {x=x, y=y-1})
         else
             -- add another tile to the right to create 2x2
             PathBuilder.queue(path, {tick=config.ticks_between_tiles, position={x=x+1, y=y}})
             table.insert(ret, {x=x+1, y=y})
+            PathBuilder.queue(path, {tick=config.ticks_between_tiles, position={x=x-1, y=y}})
+            table.insert(ret, {x=x-1, y=y})
         end
         
         
@@ -190,11 +194,11 @@ local function on_player_created(event)
     local player = game.players[event.player_index]
     local posx = math.random(-10*32, 10*32)
     local posy = math.random(-10*32, 10*32)
-    while getDistance({x=posx, y=posy}, {x=0, y=0}) <= 10*32 do
+    while getDistance({x=posx, y=posy}, {x=0, y=0}) <= 11*32 do
         posx = math.random(-10*32, 10*32)
         posy = math.random(-10*32, 10*32)
     end
-    if getDistance({x=posx, y=posy}, {x=0, y=0}) > 10*32 then
+    if getDistance({x=posx, y=posy}, {x=0, y=0}) > 11*32 then
         player.teleport({x=posx, y=posy}, game.surfaces[config.surface])
     end
 end
@@ -230,17 +234,21 @@ PathBuilder.on_init = function()
     local s = game.surfaces[config.surface] or game.create_surface(config.surface)  -- if running with oarc, use that surface, otherwise create
     -- s.generate_with_lab_tiles = true
     game.write_file('path_tiles.lua', '')
-    game.write_file('waves.lua', '')
     -- reset the log file
     s.always_day = true
     s.request_to_generate_chunks(config.origin, 12)
     s.force_generate_chunk_requests()
+    -- local mgs = s.map_gen_settings
+    s.map_gen_settings.width = 1000
+    s.map_gen_settings.height = 1000
 end
 
 commands.add_command('createpath', 'hover your cursor on an entity and run this command', function(command)
     local player = game.players[command.player_index]
     if player.selected then
+        if config.logging then
         game.print({'', 'Creating Path to ', player.selected.localised_name})
+        end
         PathBuilder.new_path(player.selected)
     end
 end)

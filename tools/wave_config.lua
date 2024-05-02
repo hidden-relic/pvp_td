@@ -1,14 +1,26 @@
+-- creates 'count' number of 'name' enemies, 'tick' ticks apart.
+-- [2] = {{name='small-biter', count = 10, tick = 0}, {name='medium-biter', count = 5, tick = 60}}
+-- the index (2) means it is Wave 2
+-- this would create 10 small biters, 0 ticks apart (simulatenously) as a group
+-- then create 5 medium biters, 60 ticks apart (1 each second for 5 seconds) as a stream
+
 local wave_config =
 {
-    ['small-biter'] = {['small-biter'] = 1},
-    ['medium-biter'] = {['medium-biter'] = 1},
-    ['big-biter'] = {['big-biter'] = 1},
-    ['behemoth-biter'] = {['behemoth-biter'] = 1},
-    [1] = {['small-biter'] = 10},
-    [2] = {['small-biter'] = 10, ['medium-biter'] = 5},
-    [3] = {['medium-biter'] = 10, ['big-biter'] = 5},
-    [4] = {['big-biter'] = 10, ['behemoth-biter'] = 1},
-    [5] = {['behemoth-biter'] = 10},
+    -- this section is used to create waves containing enemies by name
+    -- meant for creating a single enemy type, mostly for testing
+    ['small-biter'] = {{name='small-biter', count = 1, tick = 0}},
+    ['medium-biter'] = {{name='medium-biter', count = 1, tick = 0}},
+    ['big-biter'] = {{name='big-biter', count = 1, tick = 0}},
+    ['behemoth-biter'] = {{name='behemoth-biter', count = 1, tick = 0}},
+    
+    -- this section is used to create waves containing enemies by number
+    -- meant for creating pre-defined waves
+    -- also mostly for testing, we've decided to use an algorithm later
+    [1] = {{name='small-biter', count = 10, tick = 60}},
+    [2] = {{name='small-biter', count = 10, tick = 60}, {name='medium-biter', count = 5, tick = 60}},
+    [3] = {{name='medium-biter', count = 10, tick = 60}, {name='big-biter', count = 5, tick = 120}},
+    [4] = {{name='big-biter', count = 10, tick = 60}, {name='behemoth-biter', count = 1, tick = 60}},
+    [5] = {{name='behemoth-biter', count = 10, tick = 60}},
 }
 
 return wave_config
