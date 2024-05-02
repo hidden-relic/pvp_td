@@ -298,6 +298,11 @@ commands.add_command("creategroup", "/creategroup wave_index multiplier\nTarget 
         player.print('You are not admin')
         return
     end
+    if not player.selected then
+        player.print("Error: hover over position to attack")
+        return
+    end
+
     local wave_index = 1
     local multiplier = 1
     local ticks = 0
@@ -328,13 +333,16 @@ commands.add_command("creategroup", "/creategroup wave_index multiplier\nTarget 
     end
     local group, wave = WaveControl.create_wave(wave_index, multiplier, ticks)
     if group and group.valid then
-        table.insert(global.td_groups, group)
-        local group_index = #global.td_groups
+        local group_index
         if player.selected then
+            table.insert(global.td_groups, group)
+            group_index = #global.td_groups
             local command = WaveControl.move_and_attack(group, {player.selected.position}, player.selected)
             wave.command = command
+            player.print('Group can be accessed via global.td_groups['..group_index..']')
+        else
+            player.print("Error: hover over position to attack")
         end
-        player.print('Group can be accessed via global.td_groups['..group_index..']')
     else
         player.print('Something happened, no group or group is invalid. Groups are in global.td_groups')
     end

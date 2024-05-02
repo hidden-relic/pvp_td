@@ -63,10 +63,12 @@ function PathBuilder.update(tick)
                 path.wave_enabled = true
                 -- local wave = EnemyBuilder:create_wave(path.target, path.waypoints, path.player)
             end
-            return
         end
         -- are we out of instructions?
         local action = path.actions[path.index]
+        if not action then 
+            break 
+        end
         -- get our current instruction
         if tick < action.tick + path.last_tick then return end
         -- is it time to run this instruction yet?
@@ -247,10 +249,25 @@ commands.add_command('createpath', 'hover your cursor on an entity and run this 
     local player = game.players[command.player_index]
     if player.selected then
         if config.logging then
-        game.print({'', 'Creating Path to ', player.selected.localised_name})
+            game.print({'', 'Creating Path to ', player.selected.localised_name})
         end
         PathBuilder.new_path(player.selected)
+    else
+        game.print("Error: hover over entity that is the attack point for biters")
     end
 end)
+
+commands.add_command('setorigin', 'put down ghost - hover your cursor over ghost, run command to set this origin from where you want biter to spawn', function(command)
+    local player = game.players[command.player_index]
+    if player.selected then
+        if config.logging then
+            game.print({'', 'Creating origin to ', player.selected.localised_name})
+        end
+        config.origin=player.selected.position
+    else
+        game.print("Error: put down ghost - hover your cursor over ghost, run command to set this origin from where you want biter to spawn")
+    end
+end)
+
 
 return PathBuilder
