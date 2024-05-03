@@ -35,7 +35,7 @@ commands.add_command('createorigin', '', function(command)
     definition.tick = game.tick
     local origin = Origins.init_origin(definition)
     global.player_origins[player.name] = origin
-    player.print('You can access this origin through global.player_origins['..player.name..']['..#global.player_origins[player.name]..']')
+    player.print('You can access this origin through global.player_origins['..player.name..']')
 end)
 
 return Origins
