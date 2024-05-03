@@ -11,7 +11,6 @@ local PathBuilder = {origin_generated = false}
 -- queue a tile in the builder
 -- -- path:add{tick=config.ticks_between_tiles, position={x=tile.x, y=tile.y}}
 
-
 -- returns distance in tiles between 2 positions, will be used to get progress of the paths
 local function getDistance(posA, posB)
     -- Get the length for each of the components x and y
@@ -22,7 +21,7 @@ local function getDistance(posA, posB)
 end
 
 -- create a new path object
-function PathBuilder.create_path_obj(definition)
+function PathBuilder.init_path(definition)
     local obj = {}
     obj.actions = {}
     obj.index = 1
@@ -74,11 +73,13 @@ function PathBuilder.update(tick)
         }
         
         -- animation attempt
-        surface.create_entity{name="cluster-nuke-explosion", position=path.position, target=path.target}
+        if path.target.health then
+            surface.create_entity{name="cluster-nuke-explosion", position=path.position, target=path.target}
+        end
         -- surface.create_entity{name="atomic-nuke-shockwave", position=path.position, target=game.player.character}
-
+        
         path.last_tick = path.last_tick + action.tick
-
+        
         if path.index > #path.actions then
             -- if no more tiles for this path, clear it from global table
             table.insert(global.origins, path.origin)
@@ -90,8 +91,12 @@ function PathBuilder.update(tick)
     end
 end
 
-function PathBuilder.new_path(target)
-    local origin = config.origin
+function PathBuilder.new_path(player_name, target)
+    if not global.player_origins[player_name] then
+        game.print('No origin for player '..player_name)
+        return
+    end
+    local origin = global.player_origins[player_name].position
     
     local ret = {}
     -- collect tile positions in a table
@@ -100,7 +105,7 @@ function PathBuilder.new_path(target)
         game.write_file('path_tiles.lua', 'Path from '..serpent.line(origin)..' to '..serpent.line(target.position)..'\n', true)
     end
     
-    local path = PathBuilder.create_path_obj({position = origin, tick = game.tick, target = target})
+    local path = PathBuilder.init_path({position = origin, tick = game.tick, target = target})
     path.origin = origin
     table.insert(global.paths, path)
     -- create a PathBuilder instance
@@ -256,7 +261,7 @@ commands.add_command('createpath', 'hover your cursor on an entity and run this 
         if config.logging then
             game.print({'', 'Creating Path to ', player.selected.localised_name})
         end
-        PathBuilder.new_path(player.selected)
+        PathBuilder.new_path(player.name, player.selected)
     else
         game.print("Error: hover over entity that is the attack point for biters")
     end

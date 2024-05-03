@@ -61,6 +61,7 @@ function WaveControl.init_wave(definition)
     obj.index = 1
     obj.last_tick = definition.tick
     obj.group = definition.group
+    obj.player_name = definition.player_name
     if config.logging then
         game.print('Wave initialized')
     end
@@ -88,7 +89,7 @@ function WaveControl.update(tick)
         if wave.group then
             if wave.group.valid == false then
                 local surface = game.surfaces[config.surface]
-                wave.group = surface.create_unit_group{position=config.origin, force=game.forces[config.enemy_force]}
+                wave.group = surface.create_unit_group{position=global.player_origins[wave.player_name].position, force=game.forces[config.enemy_force]}
                 if wave.command and (wave.group.command == nil) then
                     wave.group.set_command
                     {
@@ -99,8 +100,9 @@ function WaveControl.update(tick)
                 end
             end
             if wave.group.valid then
-                local bug = surface.create_entity{name = action.name, position = config.origin, force = game.forces[config.enemy_force]}
+                local bug = surface.create_entity{name = action.name, position = global.player_origins[wave.player_name].position, force = game.forces[config.enemy_force]}
                 if bug and bug.valid then
+                    _C.safe_teleport(bug, global.player_origins[wave.player_name].position)
                     bug.ai_settings.allow_destroy_when_commands_fail = false
                     bug.ai_settings.allow_try_return_to_spawner = false
                     wave.group.add_member(bug)
@@ -130,14 +132,18 @@ function WaveControl.update(tick)
     end
 end
 
-function WaveControl.create_wave(wave_index, multiplier, ticks)
+function WaveControl.create_wave(player_name, wave_index, multiplier, ticks)
     -- refer to wave_config for pre-made enemy waves that use a numeric index (wave number)
     -- you may also use a bug's name as the index to create a wave of just that bug type
     -- use multiplier to multiply the amounts defined in wave_config for pre-made,
     -- or use it to state how many of the single type enemy if supplying an enemy name
     
+    if not global.player_origins[player_name] then
+        game.print('No origin for player '..player_name)
+        return
+    end
     local surface = game.surfaces[config.surface]
-    local group = surface.create_unit_group{position=config.origin, force=game.forces[config.enemy_force]}
+    local group = surface.create_unit_group{position=global.player_origins[player_name].position, force=game.forces[config.enemy_force]}
     if config.logging then
         game.print('Group created')
     end
@@ -145,7 +151,7 @@ function WaveControl.create_wave(wave_index, multiplier, ticks)
     local enemies = wave_config[wave_index or 1]
     
     -- create new 'wave' object to keep track of in on_tick
-    local wave = WaveControl.init_wave{tick=game.tick, group=group} -- trying something new
+    local wave = WaveControl.init_wave{tick=game.tick, group=group, player_name=player_name} -- trying something new
     table.insert(global.waves, wave)
     if config.logging then
         game.print('Wave added to global table')
@@ -275,30 +281,6 @@ WaveControl.events =
     [defines.events.on_unit_added_to_group] = on_unit_added_to_group,
 }
 
-commands.add_command('testgroups', '', function(command)
-    local player = game.players[command.player_index]
-    if not player.admin then
-        player.print('You are not admin')
-        return
-    end
-    local thing = player.selected
-    for i = 1, 2 do
-        player.print('Multiplier '..i..'x')
-        for j = 1, 5 do
-            if i == 1 then
-                player.print('Wave '..j)
-            else
-                player.print('Wave '..5+j)
-            end
-            local group, wave = WaveControl.create_wave(j, i)
-            if group and group.valid then
-                table.insert(global.td_groups, group)
-                wave.command = WaveControl.move_and_attack({thing.position}, thing)
-            end
-        end
-    end
-end)
-
 commands.add_command("creategroup", "/creategroup wave_index multiplier\nTarget is the entity you are hovering\nRefer to wave_config.lua\nRunning with no arguments creates Wave 1\n/creategroup 3 2 would create Wave 3 with double the enemies\n/creategroup medium-biter 5 would create 5 medium biters", function(command)
     local player = game.players[command.player_index]
     if not player.admin then
@@ -338,7 +320,7 @@ commands.add_command("creategroup", "/creategroup wave_index multiplier\nTarget 
             end
         end
     end
-    local group, wave = WaveControl.create_wave(wave_index, multiplier, ticks)
+    local group, wave = WaveControl.create_wave(player.name, wave_index, multiplier, ticks)
     if group and group.valid then
         local group_index
         if player.selected then
