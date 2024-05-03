@@ -1,4 +1,4 @@
-local config = require ('config')
+-- local config = require ('config')
 local bresenham = require('tools.bresenham')
 -- local EnemyBuilder = require('tools.enemy_builder')
 

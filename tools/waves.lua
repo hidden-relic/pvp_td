@@ -1,4 +1,4 @@
-local config = require ('config')
+-- local config = require ('config')
 local wave_config = require ('wave_config')
 
 local WaveControl = {}
