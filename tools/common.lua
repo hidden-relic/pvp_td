@@ -2,6 +2,11 @@ local config = require ('config')
 
 local Common = {}
 
+function Common.round(num, dp)
+    local mult = 10 ^ (dp or 0)
+    return math.floor(num * mult + 0.5) / mult
+end
+
 -- returns distance in tiles between 2 positions, will be used to get progress of the paths
 function Common.getDistance(posA, posB)
     -- Get the length for each of the components x and y

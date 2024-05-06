@@ -1,4 +1,4 @@
-local td_prototypes = {
+local td_prototypes = { -- just here so i can see our data easier
     ["small-biter"] = {
         ai_settings = {
             allow_try_return_to_spawner = false,
@@ -104,10 +104,42 @@ local td_prototypes = {
     }
 }
 
-td_prototypes.make_td_unit = function(definition)
-   local unit =
-   {
+-- level up a single attribute
+local lvl_item = function(v, m)
+    return v + _C.round(v * (m or 0.1))
+end
 
-   }
+-- level up attributes dealing with attack, speed, the normal things you'd increase
+-- resistances not included, yet
+local lvl_up = function(pt)
+    local new = {}
+    new.attack_parameters = pt.attack_parameters
+
+    new.attack_parameters.ammo_type.action.action_delivery.target_effects.damage.amount =
+    lvl_item(pt.attack_parameters.ammo_type.action.action_delivery.target_effects.damage.amount)
+    new.attack_parameters.cooldown =
+    lvl_item(pt.attack_parameters.cooldown, -0.01)
+    new.healing_per_tick =
+    lvl_item(pt.healing_per_tick)
+    new.max_health =
+    lvl_item(pt.max_health)
+    new.movement_speed =
+    lvl_item(pt.movement_speed)
+    return new
+end
+
+-- push the new through?
+local make_td_unit = function(unit)
     data:extend{unit}
+end
+
+-- the function i want to call to test
+local make_new_small_biters = function()
+    local pt = table.deepcopy(data.raw["unit"]["small-biter"])
+    for i = 2, 5 do
+        pt.name = "small-biter-"..i
+        pt.localised_name = {"", "Small Biter Lvl", i}
+        pt = lvl_up(pt)
+        make_td_unit(pt)
+    end
 end
