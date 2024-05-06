@@ -143,3 +143,5 @@ local make_new_small_biters = function()
         make_td_unit(pt)
     end
 end
+
+make_new_small_biters()
