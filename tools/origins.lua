@@ -24,6 +24,27 @@ Origins.on_init = function()
     global.player_origins = {}
 end
 
+local function get_new_origin_position(player)
+    local distance = 0
+    local near_distance = config.near_distance
+    local min, max = near_distance.min, near_distance.max
+    local t = {}
+    while (distance < min or distance > max) do
+        t.x, t.y = math.random(-max, max), math.random(-max, max)
+        distance = get_distance({x=0, y=0}, t)
+    end
+    return t
+end
+
+local function check_distance_between_origins(position)
+    for name, spawn in pairs(player_spawns) do
+        if get_distance(position, spawn) <= config.distance_from_another_player then
+            return false
+        end
+    end
+    return true
+end
+
 commands.add_command('createorigin', '', function(command)
     local player = game.players[command.player_index]
     if not player.admin then
