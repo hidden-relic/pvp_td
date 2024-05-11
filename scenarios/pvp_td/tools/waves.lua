@@ -198,8 +198,6 @@ function WaveControl.attack_area(destination, radius)
     }
 end
 
-function 
-
 function WaveControl.move_and_attack(positions, target)
     -- positions: a table. accepts waypoints, so positions should be a table
     -- if just a single move command just supply a table with the single position
