@@ -1,6 +1,6 @@
 -- local config = require ('config')
-local bresenham = require('tools.bresenham')
--- local EnemyBuilder = require('tools.enemy_builder')
+local bresenham = require ('bresenham')
+local WaveControl = require ('waves') 
 
 local PathBuilder = {origin_generated = false}
 
@@ -11,15 +11,6 @@ local PathBuilder = {origin_generated = false}
 -- queue a tile in the builder
 -- -- path:add{tick=config.ticks_between_tiles, position={x=tile.x, y=tile.y}}
 
--- returns distance in tiles between 2 positions, will be used to get progress of the paths
-local function getDistance(posA, posB)
-    -- Get the length for each of the components x and y
-    local xDist = posB.x - posA.x
-    local yDist = posB.y - posA.y
-    
-    return math.sqrt( (xDist ^ 2) + (yDist ^ 2) )
-end
-
 -- create a new path object
 function PathBuilder.init_path(definition)
     local obj = {}
@@ -28,22 +19,19 @@ function PathBuilder.init_path(definition)
     obj.position = definition.position
     obj.last_tick = definition.tick
     obj.target = definition.target
-    obj.wave_enabled = false
-    obj.wave = 0
-    obj.waypoints = {}
     return obj
 end
 
-function PathBuilder.get_nth_positions(path, n)
-    local n = n or 1
-    local positions = {}
-    for i = 1, #path do
-        if ((i % n) == 0) then
-            table.insert(positions, {x=path.x, y=path.y})
-        end
-    end
-    return positions
-end
+-- function PathBuilder.get_nth_positions(path, n)
+--     local n = n or 1
+--     local positions = {}
+--     for i = 1, #path do
+--         if ((i % n) == 0) then
+--             table.insert(positions, {x=path.x, y=path.y})
+--         end
+--     end
+--     return positions
+-- end
 
 -- add an instruction to the path object's tasks
 function PathBuilder.queue(path, data)
@@ -81,6 +69,8 @@ function PathBuilder.update(tick)
         path.last_tick = path.last_tick + action.tick
         
         if path.index > #path.actions then
+            global.player_timers[path.player_name] = WaveControl.init_player_timer{tick=game.tick, player_name = path.player_name, wave = 1, target = game.players[path.player_name].character}
+            WaveControl.queue_player_timer(global.player_timers[path.player_name], {tick=60*5, wave=1})
             -- if no more tiles for this path, clear it from global table
             table.insert(global.origins, path.origin)
             table.remove(global.paths, i)
@@ -107,6 +97,7 @@ function PathBuilder.new_path(player_name, target)
     
     local path = PathBuilder.init_path({position = origin, tick = game.tick, target = target})
     path.origin = origin
+    path.player_name = player_name
     table.insert(global.paths, path)
     -- create a PathBuilder instance
     
@@ -172,14 +163,12 @@ function PathBuilder.new_path(player_name, target)
 end
 
 local function getCircle(radius, center, tile)
-    local radius = radius
-    local center = center
     local results = {}
     local area = {top_left={x=center.x-radius, y=center.y-radius}, bottom_right={x=center.x+radius, y=center.y+radius}}
     
     for i = area.top_left.x, area.bottom_right.x, 1 do
         for j = area.top_left.y, area.bottom_right.y, 1 do
-            local distance = getDistance(center, {x=i, y=j})
+            local distance = _C.getDistance(center, {x=i, y=j})
             if (distance < radius) then
                 if tile then
                     table.insert(results, {name=tile, position={i, j}})
@@ -205,11 +194,11 @@ local function on_player_created(event)
     local player = game.players[event.player_index]
     local posx = math.random(-10*32, 10*32)
     local posy = math.random(-10*32, 10*32)
-    while getDistance({x=posx, y=posy}, {x=0, y=0}) <= 11*32 do
+    while _C.getDistance({x=posx, y=posy}, {x=0, y=0}) <= 11*32 do
         posx = math.random(-10*32, 10*32)
         posy = math.random(-10*32, 10*32)
     end
-    if getDistance({x=posx, y=posy}, {x=0, y=0}) > 11*32 then
+    if _C.getDistance({x=posx, y=posy}, {x=0, y=0}) > 11*32 then
         player.teleport({x=posx, y=posy}, game.surfaces[config.surface])
     end
 end

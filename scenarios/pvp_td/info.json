@@ -1,0 +1,13 @@
+{
+	"name": "pvp_td",
+	"version": "0.0.1",
+	"title": "Oarc Tower Defense PvP",
+	"author": "hidden-relic",
+	"contact": "",
+	"factorio_version": "1.1",
+	"description": "",
+	"homepage": "https://discord.gg/wuWcgcy5",
+	"dependencies": [
+		"base >= 1.1"
+	]
+}

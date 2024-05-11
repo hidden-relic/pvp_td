@@ -1,5 +1,4 @@
--- local config = require ('config')
-
+local origin_controls = require ('origin_controls_gui')
 local Origins = {}
 
 function Origins.init_origin(definition)
@@ -14,6 +13,7 @@ function Origins.init_origin(definition)
     obj.index = 1
     obj.position = definition.position
     obj.last_tick = definition.tick
+    obj.spawner = spawner
     if config.logging then
         game.print('Origin initialized')
     end
@@ -35,6 +35,7 @@ commands.add_command('createorigin', '', function(command)
     definition.tick = game.tick
     local origin = Origins.init_origin(definition)
     global.player_origins[player.name] = origin
+    origin_controls.init_origin_controls(player)
     player.print('You can access this origin through global.player_origins['..player.name..']')
 end)
 

@@ -16,56 +16,35 @@ local wave_config =
     -- this section is used to create waves containing enemies by number
     -- meant for creating pre-defined waves
     -- also mostly for testing, we've decided to use an algorithm later
-    [1] = {{name='small-biter', count = 25, tick = 60}},
-    [2] = {{name='small-biter', count = 25, tick = 30}},
-    [3] = {
-        {name='small-biter', count = 5, tick = 60},
+    [1] = {
+        {name='small-biter', count = 3, tick = 60},
+        {name='small-biter-2', count = 3, tick = 60},
+        {name='small-biter-3', count = 3, tick = 60},
+        {name='small-biter-4', count = 3, tick = 60},
+        {name='small-biter-5', count = 3, tick = 60},
+        {name='medium-biter', count = 1, tick = 240},
         {name='medium-biter', count = 2, tick = 60},
-        {name='small-biter', count = 5, tick = 60},
-        {name='medium-biter', count = 2, tick = 60},
-        {name='small-biter', count = 5, tick = 60},
-        {name='medium-biter', count = 2, tick = 60},
-        {name='small-biter', count = 5, tick = 60},
-        {name='medium-biter', count = 2, tick = 60},
-        {name='small-biter', count = 5, tick = 60},
-        {name='medium-biter', count = 2, tick = 60}
-    },
-    [4] = {
-        {name='small-biter', count = 5, tick = 30},
-        {name='medium-biter', count = 2, tick = 30},
-        {name='small-biter', count = 5, tick = 30},
-        {name='medium-biter', count = 2, tick = 30},
-        {name='small-biter', count = 5, tick = 30},
-        {name='medium-biter', count = 2, tick = 30},
-        {name='small-biter', count = 5, tick = 30},
-        {name='medium-biter', count = 2, tick = 30},
-        {name='small-biter', count = 5, tick = 30},
-        {name='medium-biter', count = 2, tick = 30}
-    },
-    [5] = {
-        {name='small-biter', count = 5, tick = 60},
-        {name='medium-biter', count = 2, tick = 60},
-        {name='small-biter', count = 5, tick = 60},
+        {name='medium-biter-2', count = 3, tick = 60},
+        {name='medium-biter-3', count = 3, tick = 60},
+        {name='medium-biter-4', count = 3, tick = 60},
+        {name='medium-biter-5', count = 3, tick = 60},
+        {name='big-biter', count = 1, tick = 240},
         {name='big-biter', count = 2, tick = 60},
-        {name='small-biter', count = 5, tick = 60},
-        {name='medium-biter', count = 2, tick = 60},
-        {name='small-biter', count = 5, tick = 60},
-        {name='big-biter', count = 2, tick = 60},
-        {name='medium-biter', count = 5, tick = 60},
-        {name='big-biter', count = 2, tick = 60}
+        {name='big-biter-2', count = 3, tick = 60},
+        {name='big-biter-3', count = 3, tick = 60},
+        {name='big-biter-4', count = 3, tick = 60},
+        {name='big-biter-5', count = 3, tick = 60},
+        {name='behemoth-biter', count = 1, tick = 240},
+        {name='behemoth-biter', count = 2, tick = 60},
+        {name='behemoth-biter-2', count = 3, tick = 60},
+        {name='behemoth-biter-3', count = 3, tick = 60},
+        {name='behemoth-biter-4', count = 3, tick = 60},
+        {name='behemoth-biter-5', count = 3, tick = 60},
     },
-    [6] = {
-        {name='small-biter', count = 5, tick = 30},
-        {name='medium-biter', count = 2, tick = 30},
-        {name='small-biter', count = 5, tick = 30},
-        {name='big-biter', count = 2, tick = 30},
-        {name='small-biter', count = 5, tick = 30},
-        {name='medium-biter', count = 2, tick = 30},
-        {name='small-biter', count = 5, tick = 30},
-        {name='big-biter', count = 2, tick = 30},
-        {name='medium-biter', count = 5, tick = 30},
-        {name='big-biter', count = 2, tick = 30}
-    },
+    [2] = {{name='small-biter', count = 10, tick = 60}, {name='medium-biter', count = 5, tick = 60}},
+    [3] = {{name='medium-biter', count = 10, tick = 60}, {name='big-biter', count = 5, tick = 120}},
+    [4] = {{name='big-biter', count = 10, tick = 60}, {name='behemoth-biter', count = 1, tick = 60}},
+    [5] = {{name='behemoth-biter', count = 10, tick = 60}},
 }
 
 return wave_config

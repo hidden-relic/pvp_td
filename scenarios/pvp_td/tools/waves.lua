@@ -3,58 +3,6 @@ local wave_config = require ('wave_config')
 
 local WaveControl = {}
 
--- functions:
--- WaveControl.init_wave(definition)
----- create and return the table to hold the data of the wave, such as what is spawned and when
------- 'definition' is a table containing the current tick and the group that enemies will be added to
--- usage:
----- WaveControl.init_wave{tick=game.tick, group=LuaGroup}
-
--- WaveControl.queue(wave, data)
----- add an enemy creation instruction to our wave table
------- 'wave' is the wave table returned by init_wave()
------- 'data' is a table containing creation info, including the enemy name and how many ticks until creation
--- usage:
----- WaveControl.queue(wave, {tick=60, name='small-biter'})
-
--- WaveControl.create_wave(wave_index, multiplier, ticks)
----- combines the 2 previous functions, so that you can supply an index for a wave composition,
----- the optional multiplier to increase the amount of enemies, and the ticks between spawns
------- 'wave_index' (optional) is the key (or index) to use from the table that wave_config.lua returns
------- default: '1' (wave 1 or entry [1] in the wave_config table)
------- 'multiplier' (optional) is what the enemy counts will be multiplied by
------- default: '1' (1*count)
------- 'ticks' (optional) is the number of ticks to wait between spawning enemies.
------- this value is ignored if the enemy already has a tick value that isn't 0 in wave_config
------- this means if your pre-gen wave already has ticks assigned (not 0), they will still be used
------- default: '0' (instant)
--- usage:
----- if a pre-gen wave is desired:
----- WaveControl.create_wave(3, 2)
------- this would create Wave 3 (entry [3] in wave_config table) with 2x enemies
------- [3] = {{name='medium-biter', count = 10, tick = 60}, {name='big-biter', count = 5, tick = 120}}
------- Wave 3 with 'multiplier' 2 is 20 medium biters, spawned 60 ticks (1s) apart,
------- then 10 big biters, spawned 120 ticks (2s) apart
----- if a single enemy type is desired:
----- WaveControl.create_wave('big-biter', 20)
------- this would create 20 big biters
-
--- WaveControl.move_and_attack(group, positions, target)
----- issue a move and/or move+attack command
------- 'group' is the LuaGroup to issue the commands to
------- 'positions' is a table of positions. to use a single position, supply a table with a single entry
------- 'target' (optional) is a LuaEntity that the group will attack after moving to all positions
--- usage:
----- single move:
------- WaveControl.move_and_attack(LuaGroup, {{x=100, y=200}})
----- waypoint move:
------- WaveControl.move_and_attack(LuaGroup, {{x=100, y=200}, {x=150, y=250}})
----- single move and attack:
------- WaveControl.move_and_attack(LuaGroup, {{x=100, y=200}}, LuaEntity)
----- waypoint move and attack:
------- WaveControl.move_and_attack(LuaGroup, {{x=100, y=200}, {x=150, y=250}}, LuaEntity)
-
-
 function WaveControl.init_wave(definition)
     local obj = {}
     obj.actions = {}
@@ -132,6 +80,56 @@ function WaveControl.update(tick)
     end
 end
 
+function WaveControl.init_player_timer(definition)
+    local obj = {}
+    obj.actions = {}
+    obj.index = 1
+    obj.last_tick = definition.tick
+    obj.player_name = definition.player_name
+    obj.wave = definition.wave or 1
+    obj.target = definition.target
+    return obj
+end
+
+function WaveControl.queue_player_timer(timer, data)
+    timer.actions[#timer.actions + 1] = data
+end
+
+function WaveControl.update_player_timers(tick)
+    local timers = global.player_timers
+    for player_name, timer in pairs(timers) do
+        -- get our current instruction
+        local action = timer.actions[timer.index]
+        
+        -- is it time to run this instruction yet?
+        if tick < action.tick + timer.last_tick then
+            return
+        end
+        
+        timer.index = timer.index + 1
+        
+        local group, wave = WaveControl.create_wave(player_name, action.wave, 1)
+        if group and group.valid then
+            if action.target then
+                table.insert(global.td_groups, group)
+                wave.command = WaveControl.move_and_attack(action.target.position, action.target)
+            end
+        end
+        
+        timer.last_tick = timer.last_tick + action.tick
+
+        if timer.index > #timer.actions then
+            local controller = global.origin_controller[player_name].controller
+            control_table = controller['origin_control_table']
+            local k = player_name .. '_wave_speed'
+            local new_tick = control_table[k].slider_value*60
+            k = player_name .. '_wave_difficulty'
+            local wave_difficulty = control_table[k].slider_value
+            WaveControl.queue_player_timer(timers[player_name], {tick=new_tick, wave=wave_difficulty})
+        end
+    end
+end
+
 function WaveControl.create_wave(player_name, wave_index, multiplier, ticks)
     -- refer to wave_config for pre-made enemy waves that use a numeric index (wave number)
     -- you may also use a bug's name as the index to create a wave of just that bug type
@@ -178,6 +176,30 @@ function WaveControl.create_wave(player_name, wave_index, multiplier, ticks)
     return group, wave
 end
 
+--------------------
+-- Group Commands --
+--------------------
+
+function WaveControl.attack(target, distraction)
+    -- assert(target)
+    return {
+        type=defines.command.attack,
+        target=target,
+        distraction=distraction or defines.distraction.none
+    }
+end
+
+function WaveControl.attack_area(destination, radius)
+    return {
+        type=defines.command.attack_area,
+        destination=destination,
+        radius=radius or 32,
+        distraction=defines.distraction.none
+    }
+end
+
+function 
+
 function WaveControl.move_and_attack(positions, target)
     -- positions: a table. accepts waypoints, so positions should be a table
     -- if just a single move command just supply a table with the single position
@@ -213,9 +235,14 @@ function WaveControl.move_and_attack(positions, target)
     return waypoint_commands
 end
 
+--------------------
+-- Event handlers --
+--------------------
+
 WaveControl.on_init = function()
     global.td_groups = {}
     global.waves = {}
+    global.player_timers = {}
     local enemy_force = game.create_force(config.enemy_force)
     enemy_force.ai_controllable = false
     
@@ -232,14 +259,10 @@ local function on_tick()
                 table.remove(global.td_groups, i)
                 return
             end
-            -- if (group.command == nil) then
-            --     for _, bug in pairs(group.members) do
-            --         bug.destroy()
-            --     end
-            --     group.destroy()
-            --     table.remove(global.td_groups, i)
-            -- end
         end
+    end
+    if _C.table_length(global.player_timers) > 0 then
+        WaveControl.update_player_timers(game.tick)
     end
 end
 
@@ -281,59 +304,59 @@ WaveControl.events =
     [defines.events.on_unit_added_to_group] = on_unit_added_to_group,
 }
 
-commands.add_command("creategroup", "/creategroup wave_index multiplier\nTarget is the entity you are hovering\nRefer to wave_config.lua\nRunning with no arguments creates Wave 1\n/creategroup 3 2 would create Wave 3 with double the enemies\n/creategroup medium-biter 5 would create 5 medium biters", function(command)
-    local player = game.players[command.player_index]
-    if not player.admin then
-        player.print('You are not admin')
-        return
-    end
-    if not player.selected then
-        player.print("Error: hover over position to attack")
-        return
-    end
-    
-    local wave_index = 1
-    local multiplier = 1
-    local ticks = 0
-    if command.parameter then
-        local params = command.parameter
-        local args = {}
-        for arg in params:gmatch("%S+") do table.insert(args, arg) end
-        if wave_config[args[1]] then
-            wave_index = args[1]
-        else
-            local try_wave_index = tonumber(args[1])
-            if (type(try_wave_index) == 'number') and (wave_config[try_wave_index]) then
-                wave_index = try_wave_index
-            end
-        end
-        if args[2] then
-            local try_multiplier = tonumber(args[2])
-            if type(try_multiplier) == 'number' then
-                multiplier = try_multiplier
-            end
-        end
-        if args[3] then
-            local try_ticks = tonumber(args[3])
-            if type(try_ticks) == 'number' then
-                ticks = try_ticks
-            end
-        end
-    end
-    local group, wave = WaveControl.create_wave(player.name, wave_index, multiplier, ticks)
-    if group and group.valid then
-        local group_index
-        if player.selected then
-            table.insert(global.td_groups, group)
-            group_index = #global.td_groups
-            wave.command = WaveControl.move_and_attack({player.selected.position}, player.selected)
-            player.print('Group can be accessed via global.td_groups['..group_index..']')
-        else
-            player.print("Error: hover over position to attack")
-        end
-    else
-        player.print('Something happened, no group or group is invalid. Groups are in global.td_groups')
-    end
-end)
+-- commands.add_command("creategroup", "/creategroup wave_index multiplier\nTarget is the entity you are hovering\nRefer to wave_config.lua\nRunning with no arguments creates Wave 1\n/creategroup 3 2 would create Wave 3 with double the enemies\n/creategroup medium-biter 5 would create 5 medium biters", function(command)
+--     local player = game.players[command.player_index]
+--     if not player.admin then
+--         player.print('You are not admin')
+--         return
+--     end
+--     if not player.selected then
+--         player.print("Error: hover over position to attack")
+--         return
+--     end
+
+--     local wave_index = 1
+--     local multiplier = 1
+--     local ticks = 0
+--     if command.parameter then
+--         local params = command.parameter
+--         local args = {}
+--         for arg in params:gmatch("%S+") do table.insert(args, arg) end
+--         if wave_config[args[1]] then
+--             wave_index = args[1]
+--         else
+--             local try_wave_index = tonumber(args[1])
+--             if (type(try_wave_index) == 'number') and (wave_config[try_wave_index]) then
+--                 wave_index = try_wave_index
+--             end
+--         end
+--         if args[2] then
+--             local try_multiplier = tonumber(args[2])
+--             if type(try_multiplier) == 'number' then
+--                 multiplier = try_multiplier
+--             end
+--         end
+--         if args[3] then
+--             local try_ticks = tonumber(args[3])
+--             if type(try_ticks) == 'number' then
+--                 ticks = try_ticks
+--             end
+--         end
+--     end
+--     local group, wave = WaveControl.create_wave(player.name, wave_index, multiplier, ticks)
+--     if group and group.valid then
+--         local group_index
+--         if player.selected then
+--             table.insert(global.td_groups, group)
+--             group_index = #global.td_groups
+--             wave.command = WaveControl.move_and_attack({player.selected.position}, player.selected)
+--             player.print('Group can be accessed via global.td_groups['..group_index..']')
+--         else
+--             player.print("Error: hover over position to attack")
+--         end
+--     else
+--         player.print('Something happened, no group or group is invalid. Groups are in global.td_groups')
+--     end
+-- end)
 
 return WaveControl
