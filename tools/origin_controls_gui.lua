@@ -297,9 +297,4 @@ origin_controls.events =
     -- [defines.events.on_player_created] = on_player_created
 }
 
--- origin_controls.on_nth_tick =
--- {
---     [10] = on_nth_tick
--- }
-
 return origin_controls

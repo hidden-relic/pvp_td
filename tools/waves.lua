@@ -176,6 +176,30 @@ function WaveControl.create_wave(player_name, wave_index, multiplier, ticks)
     return group, wave
 end
 
+--------------------
+-- Group Commands --
+--------------------
+
+function WaveControl.attack(target, distraction)
+    -- assert(target)
+    return {
+        type=defines.command.attack,
+        target=target,
+        distraction=distraction or defines.distraction.none
+    }
+end
+
+function WaveControl.attack_area(destination, radius)
+    return {
+        type=defines.command.attack_area,
+        destination=destination,
+        radius=radius or 32,
+        distraction=defines.distraction.none
+    }
+end
+
+function 
+
 function WaveControl.move_and_attack(positions, target)
     -- positions: a table. accepts waypoints, so positions should be a table
     -- if just a single move command just supply a table with the single position
