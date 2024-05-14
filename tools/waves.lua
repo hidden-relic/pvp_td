@@ -8,8 +8,6 @@ function WaveControl.init_wave(definition)
     obj.actions = {}
     obj.index = 1
     obj.last_tick = definition.tick
-    obj.group = definition.group
-    obj.player_name = definition.player_name
     if config.logging then
         game.print('Wave initialized')
     end
@@ -21,61 +19,62 @@ function WaveControl.queue(wave, data)
 end
 
 -- to be used as the handler for on_tick event
-function WaveControl.update(tick)
-    local waves = global.waves
-    for i, wave in pairs(waves) do
-        -- get our current instruction
-        local action = wave.actions[wave.index]
-        
-        -- is it time to run this instruction yet?
-        if tick < action.tick + wave.last_tick then return end
-        
-        wave.index = wave.index + 1
-        
-        local surface = game.surfaces[config.surface]
-        
-        if wave.group then
-            if wave.group.valid == false then
-                local surface = game.surfaces[config.surface]
-                wave.group = surface.create_unit_group{position=global.player_origins[wave.player_name].position, force=game.forces[config.enemy_force]}
-                if wave.command and (wave.group.command == nil) then
-                    wave.group.set_command
-                    {
-                        type = defines.command.compound,
-                        structure_type = defines.compound_command.return_last,
-                        commands = wave.command
-                    }
+function WaveControl.update(wave_index, player_name)
+    local wave = global.origins[player_name].waves[wave_index]
+    local action = wave.actions[wave.index]
+    
+    -- is it time to run this instruction yet?
+    if game.tick < action.tick + wave.last_tick then return end
+    
+    wave.index = wave.index + 1
+    
+    local surface = game.surfaces[config.surface]
+    
+    if not wave.group then
+        local group = surface.create_unit_group{position=global.origins[player_name].position, force=game.forces[config.enemy_force]}
+        table.insert(global.origins[player_name].groups, group)
+        wave.group = group
+    end
+    
+    if wave.group then
+        if wave.group.valid == false then
+            local group = surface.create_unit_group{position=global.origins[player_name].position, force=game.forces[config.enemy_force]}
+            table.insert(global.origins[player_name].groups, group)
+            wave.group = group
+        end
+        local bug = surface.create_entity{name = action.name, position = _C.safe_position(action.name, global.origins[player_name].position), force = game.forces[config.enemy_force]}
+        if bug and bug.valid then
+            bug.ai_settings.allow_destroy_when_commands_fail = false
+            bug.ai_settings.allow_try_return_to_spawner = false
+            wave.group.add_member(bug)
+        end
+        local creeps = surface.find_entities_filtered{position=global.origins[player_name].position, radius=10, type='unit', force=game.forces[config.enemy_force]}
+        if creeps then
+            for _, creep in pairs(creeps) do
+                if creep.command == nil then
+                    wave.group.add_member(creep)
                 end
-            end
-            if wave.group.valid then
-                local bug = surface.create_entity{name = action.name, position = global.player_origins[wave.player_name].position, force = game.forces[config.enemy_force]}
-                if bug and bug.valid then
-                    _C.safe_teleport(bug, global.player_origins[wave.player_name].position)
-                    bug.ai_settings.allow_destroy_when_commands_fail = false
-                    bug.ai_settings.allow_try_return_to_spawner = false
-                    wave.group.add_member(bug)
-                end
-                if #wave.group.members == wave.minimum_gathered then
-                    wave.group.set_command
-                    {
-                        type = defines.command.compound,
-                        structure_type = defines.compound_command.return_last,
-                        commands = wave.command
-                    }
-                end
-            else
-                game.print("Wave's group is nil or invalid at wave.index "..wave.index..". (reference to the wave: global.waves["..i.."])")
             end
         end
-        
-        --update our timer
-        wave.last_tick = wave.last_tick + action.tick
-        if wave.index > #wave.actions then
-            -- if no more enemies spawning this wave, clear it from global table
-            table.remove(global.waves, i)
-            if config.logging then
-                game.print('Wave complete. '..#global.waves..' left.')
+        if #wave.group.members == wave.minimum_gathered then
+            if not wave.command then wave.command = {WaveControl.attack_area(global.origins[player_name].target_position)} end
+            if wave.command and (wave.group.command == nil) then
+                wave.group.set_command
+                {
+                    type = defines.command.compound,
+                    structure_type = defines.compound_command.return_last,
+                    commands = wave.command
+                }
             end
+        end
+    end
+    --update our timer
+    wave.last_tick = wave.last_tick + action.tick
+    if wave.index > #wave.actions then
+        -- if no more enemies spawning this wave, clear it from global table
+        table.remove(global.origins[player_name].waves, wave_index)
+        if config.logging then
+            -- game.print('Wave complete. '..#global.waves..' left.')
         end
     end
 end
@@ -87,7 +86,6 @@ function WaveControl.init_player_timer(definition)
     obj.last_tick = definition.tick
     obj.player_name = definition.player_name
     obj.wave = definition.wave or 1
-    obj.target = definition.target
     return obj
 end
 
@@ -108,19 +106,17 @@ function WaveControl.update_player_timers(tick)
         
         timer.index = timer.index + 1
         
-        local group, wave = WaveControl.create_wave(player_name, action.wave, 1)
-        if group and group.valid then
-            if action.target then
-                table.insert(global.td_groups, group)
-                wave.command = WaveControl.move_and_attack(action.target.position, action.target)
-            end
+        local origin = global.origins[player_name]
+        local wave = WaveControl.create_wave(player_name, action.wave, 1)
+        if origin.target_position then
+            wave.command = {WaveControl.attack_area(origin.target_position)}
         end
         
         timer.last_tick = timer.last_tick + action.tick
-
+        
         if timer.index > #timer.actions then
             local controller = global.origin_controller[player_name].controller
-            control_table = controller['origin_control_table']
+            local control_table = controller['origin_control_table']
             local k = player_name .. '_wave_speed'
             local new_tick = control_table[k].slider_value*60
             k = player_name .. '_wave_difficulty'
@@ -136,29 +132,26 @@ function WaveControl.create_wave(player_name, wave_index, multiplier, ticks)
     -- use multiplier to multiply the amounts defined in wave_config for pre-made,
     -- or use it to state how many of the single type enemy if supplying an enemy name
     
-    if not global.player_origins[player_name] then
+    if not global.origins[player_name] then
         game.print('No origin for player '..player_name)
         return
     end
     local surface = game.surfaces[config.surface]
-    local group = surface.create_unit_group{position=global.player_origins[player_name].position, force=game.forces[config.enemy_force]}
-    if config.logging then
-        game.print('Group created')
-    end
+    
     -- here we plug in our enemy table
     local enemies = wave_config[wave_index or 1]
     
     -- create new 'wave' object to keep track of in on_tick
-    local wave = WaveControl.init_wave{tick=game.tick, group=group, player_name=player_name} -- trying something new
-    table.insert(global.waves, wave)
-    if config.logging then
-        game.print('Wave added to global table')
-        if wave.group.valid then
-            game.print('Group still valid inside wave')
-        else
-            game.print('Group now invalid inside wave')
-        end
-    end
+    local wave = WaveControl.init_wave{tick=game.tick} -- trying something new
+    table.insert(global.origins[player_name].waves, wave)
+    -- if config.logging then
+    --     game.print('Wave added to global table')
+    --     if wave.group.valid then
+    --         game.print('Group still valid inside wave')
+    --     else
+    --         game.print('Group now invalid inside wave')
+    --     end
+    -- end
     
     local enemy_count = 0
     for index, enemy in pairs(enemies) do
@@ -173,7 +166,7 @@ function WaveControl.create_wave(player_name, wave_index, multiplier, ticks)
         end
     end
     wave.minimum_gathered = math.floor(enemy_count*config.percent_bugs_created_before_command)
-    return group, wave
+    return wave
 end
 
 --------------------
@@ -189,12 +182,12 @@ function WaveControl.attack(target, distraction)
     }
 end
 
-function WaveControl.attack_area(destination, radius)
+function WaveControl.attack_area(destination, radius, distraction)
     return {
         type=defines.command.attack_area,
         destination=destination,
         radius=radius or 32,
-        distraction=defines.distraction.none
+        distraction=distraction or defines.distraction.none
     }
 end
 
@@ -238,8 +231,6 @@ end
 --------------------
 
 WaveControl.on_init = function()
-    global.td_groups = {}
-    global.waves = {}
     global.player_timers = {}
     local enemy_force = game.create_force(config.enemy_force)
     enemy_force.ai_controllable = false
@@ -248,14 +239,20 @@ WaveControl.on_init = function()
 end
 
 local function on_tick()
-    if #global.waves > 0 then
-        WaveControl.update(game.tick)
-    end
-    if #global.td_groups > 0 then
-        for i, group in pairs(global.td_groups) do
-            if (group.valid == false) then
-                table.remove(global.td_groups, i)
-                return
+    for name, origin in pairs(global.origins) do
+        if game.players[name] then
+            if #global.origins[name].waves > 0 then
+                for i, wave in pairs(global.origins[name].waves) do
+                    WaveControl.update(i, name)
+                end
+            end
+            if #global.origins[name].groups > 0 then
+                for i, group in pairs(global.origins[name].groups) do
+                    if (group.valid == false) then
+                        table.remove(global.origins[name].groups, i)
+                        return
+                    end
+                end
             end
         end
     end

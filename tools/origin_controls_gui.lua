@@ -66,59 +66,61 @@ local function populate_controller_table(controls_table)
     
     controls_table.clear()
     create_headers(controls_table)
-    for player_name, origin in pairs(global.player_origins) do
-        controls_table.add
-        {
-            type = 'label',
-            caption = player_name
-        }
-        controls_table.add
-        {
-            name = player_name .. '_spawner_health',
-            type = 'progressbar',
-            style = 'health_progressbar',
-            value = global.player_origins[player_name].spawner.get_health_ratio()
-        }
-        controls_table.add
-        {
-            type = 'label',
-            caption = serpent.line(global.player_origins[player_name].spawner.position)
-        }
-        controls_table.add
-        {
-            name = player_name .. '_path_switch',
-            type = 'switch'
-        }
-        controls_table.add
-        {
-            name = player_name .. '_path_speed',
-            type = 'slider',
-            minimum_value = 1,
-            maximum_value = 600,
-            value = 60
-        }
-        controls_table.add
-        {
-            name = player_name .. '_path_progress',
-            type = 'progressbar',
-            value = 0
-        }
-        controls_table.add
-        {
-            name = player_name .. '_wave_difficulty',
-            type = 'slider',
-            minimum_value = 1,
-            maximum_value = 5,
-            value = 1
-        }
-        controls_table.add
-        {
-            name = player_name .. '_wave_speed',
-            type = 'slider',
-            minimum_value = 1,
-            maximum_value = 600,
-            value = 300
-        }
+    for player_name, origin in pairs(global.origins) do
+        if game.players[player_name] then
+            controls_table.add
+            {
+                type = 'label',
+                caption = player_name
+            }
+            controls_table.add
+            {
+                name = player_name .. '_spawner_health',
+                type = 'progressbar',
+                style = 'health_progressbar',
+                value = global.origins[player_name].spawner.get_health_ratio()
+            }
+            controls_table.add
+            {
+                type = 'label',
+                caption = serpent.line(global.origins[player_name].spawner.position)
+            }
+            controls_table.add
+            {
+                name = player_name .. '_path_switch',
+                type = 'switch'
+            }
+            controls_table.add
+            {
+                name = player_name .. '_path_speed',
+                type = 'slider',
+                minimum_value = 1,
+                maximum_value = 600,
+                value = 60
+            }
+            controls_table.add
+            {
+                name = player_name .. '_path_progress',
+                type = 'progressbar',
+                value = 0
+            }
+            controls_table.add
+            {
+                name = player_name .. '_wave_difficulty',
+                type = 'slider',
+                minimum_value = 1,
+                maximum_value = 5,
+                value = 1
+            }
+            controls_table.add
+            {
+                name = player_name .. '_wave_speed',
+                type = 'slider',
+                minimum_value = 1,
+                maximum_value = 600,
+                value = 300
+            }
+        end
     end
 end
 
@@ -147,20 +149,18 @@ end
 
 local function origin_controller_update(player)
     local controller = global.origin_controller[player.name].controller
-    control_table = controller['origin_control_table']
-    for player_name, origin in pairs(global.player_origins) do
+    local control_table = controller['origin_control_table']
+    for player_name, origin in pairs(global.origins) do
         local k = player_name..'_spawner_health'
         if control_table[k] then
-            if global.player_origins[player_name].spawner and global.player_origins[player_name].spawner.valid then
-                control_table[k].value = global.player_origins[player_name].spawner.get_health_ratio()
+            if global.origins[player_name].spawner and global.origins[player_name].spawner.valid then
+                control_table[k].value = global.origins[player_name].spawner.get_health_ratio()
             end
         end
         k = player_name..'_path_progress'
         if control_table[k] then
-            for i, path in pairs(global.paths) do
-                if path.player_name == player_name then
-                    control_table[k].value = _C.round((global.paths[i].index/#global.paths[i].actions), 2) or 0
-                end
+            for i, path in pairs(global.origins[player.name].paths) do
+                control_table[k].value = _C.round((global.origins[player.name].paths[i].index/#global.origins[player.name].paths[i].actions), 2) or 0
             end
         end
     end
@@ -170,8 +170,8 @@ end
 -- wrap it up! --
 -----------------
 
-function origin_controls.init_origin_controls(player)
-    if global.player_origins[player.name] then
+function origin_controls.create_origin_controls(player)
+    if global.origins[player.name] then
         init_warning_button(player)
         if player.admin then
             init_origin_control_button(player)
