@@ -165,7 +165,7 @@ function WaveControl.create_wave(player_name, wave_index, multiplier, ticks)
             end
         end
     end
-    wave.minimum_gathered = math.floor(enemy_count*config.percent_bugs_created_before_command)
+    wave.minimum_gathered = math.floor(enemy_count*config.percent_bugs_created_before_departing)
     return wave
 end
 
@@ -261,6 +261,42 @@ local function on_tick()
     end
 end
 
+local function on_entity_damaged(event)
+    local entity = event.entity
+    local cause = event.cause
+    local damage = math.floor(event.original_damage_amount)
+    local health = math.floor(entity.health)
+    local health_percentage = entity.get_health_ratio()
+    local text_color = {r = 1 - health_percentage, g = health_percentage, b = 0}
+    
+    -- Gets the location of the text
+    local size = entity.get_radius()
+    if size < 1 then size = 1 end
+    local r = (math.random() - 0.5) * size * 0.75
+    local p = entity.position
+    local position = {x = p.x + r, y = p.y - size}
+    local cause_types = {'character', 'gun-turret', 'laser-turret', 'flamethrower-turret'}
+    local message
+    if entity.name == 'character' then
+        message = {'damage-popup.player-health', health}
+    elseif entity.name ~= 'character' and cause and cause_types[cause.name] then
+        message = {'damage-popup.player-damage', damage}
+    end
+    
+    -- Outputs the message as floating text
+    if message then
+        _C.floating_text(entity.surface, position, message, text_color)
+    end
+
+    -- gonna leave this here for a possible feature..turret's damage increases every time it does damage. Only gun-turret is here
+    -- possible use: a tech to unlock this for all turrets, a skill with a timer and a cooldown that performs this, then returns to standard damage
+
+    -- if cause and cause.name == "gun-turret" and cause.last_user and has_this_tech_active(cause.last_user.name) then
+    --     local player = cause.last_user
+    --     player.force.set_ammo_damage_modifier("bullet", player.force.get_ammo_damage_modifier("bullet") + damage * 0.0000001)
+    -- end
+end
+
 -- testing/logging
 local function format_info(title, value)
     local s = '[color=blue]'..title..':[/color] [color=green]'..value..'[/color]'
@@ -294,6 +330,7 @@ end
 WaveControl.events =
 {
     [defines.events.on_tick] = on_tick,
+    [defines.events.on_entity_damaged] = on_entity_damaged,
     --testing/logging
     [defines.events.on_unit_group_created] = on_unit_group_created,
     [defines.events.on_unit_added_to_group] = on_unit_added_to_group,

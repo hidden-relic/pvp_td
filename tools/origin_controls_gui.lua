@@ -85,12 +85,32 @@ local function populate_controller_table(controls_table)
                 type = 'label',
                 caption = serpent.line(global.origins[player_name].spawner.position)
             }
-            controls_table.add
+            local path_switch_flow = controls_table.add
+            {
+                name = player_name .. '_path_switch_flow',
+                type = 'flow'
+            }
+            path_switch_flow.add
+            {
+                type = 'label',
+                caption = 'Off'
+            }
+            path_switch_flow.add
             {
                 name = player_name .. '_path_switch',
                 type = 'switch'
             }
-            controls_table.add
+            path_switch_flow.add
+            {
+                type = 'label',
+                caption = 'On'
+            }
+            local path_speed_flow = controls_table.add
+            {
+                name = player_name .. 'path_speed_flow',
+                type = 'flow'
+            }
+            path_speed_flow.add
             {
                 name = player_name .. '_path_speed',
                 type = 'slider',
@@ -98,13 +118,24 @@ local function populate_controller_table(controls_table)
                 maximum_value = 600,
                 value = 60
             }
+            path_speed_flow.add
+            {
+                name = player_name .. 'path_speed_label',
+                type = 'label',
+                caption = ''
+            }
             controls_table.add
             {
                 name = player_name .. '_path_progress',
                 type = 'progressbar',
                 value = 0
             }
-            controls_table.add
+            local wave_difficulty_flow = controls_table.add
+            {
+                name = player_name .. 'wave_difficulty_flow',
+                type = 'flow'
+            }
+            wave_difficulty_flow.add
             {
                 name = player_name .. '_wave_difficulty',
                 type = 'slider',
@@ -112,13 +143,30 @@ local function populate_controller_table(controls_table)
                 maximum_value = 5,
                 value = 1
             }
-            controls_table.add
+            wave_difficulty_flow.add
+            {
+                name = player_name .. 'wave_difficulty_label',
+                type = 'label',
+                caption = ''
+            }
+            local wave_speed_flow = controls_table.add
+            {
+                name = player_name .. 'wave_speed_flow',
+                type = 'flow'
+            }
+            wave_speed_flow.add
             {
                 name = player_name .. '_wave_speed',
                 type = 'slider',
                 minimum_value = 1,
                 maximum_value = 600,
                 value = 300
+            }
+            wave_speed_flow.add
+            {
+                name = player_name .. 'wave_speed_label',
+                type = 'label',
+                caption = ''
             }
         end
     end
@@ -220,7 +268,7 @@ local function on_gui_selection_state_changed(event)
     local player = game.players[event.player_index]
     local element = event.element
     local controller = global.origin_controller[player.name].controller
-    control_table = controller['origin_control_table']
+    local control_table = controller['origin_control_table']
     if element == control_table['table_dd'] then
         control_table.style = element.get_item(element.selected_index)
     end
@@ -229,43 +277,114 @@ end
 local function on_gui_value_changed(event)
     local player = game.players[event.player_index]
     local controller = global.origin_controller[player.name].controller
-    control_table = controller['origin_control_table']
+    local control_table = controller['origin_control_table']
     local element = event.element
-    local k = player.name .. '_path_speed'
-    if element == control_table[k] then
-        for i, path in pairs(global.paths) do
-            if path.player_name == player.name then
-                local path = global.paths[i]
-                for j, action in pairs(path.actions) do
-                    path.actions[j].tick = control_table[k].slider_value
+    
+    for index, chosen_player in pairs(game.players) do
+        local k = chosen_player.name .. '_path_speed'
+        local flow = k .. '_flow'
+        if element == control_table[flow][k] then
+            if global.origins[chosen_player.name] and global.origins[chosen_player.name].paths then
+                for i, path in pairs(global.origins[chosen_player.name].paths) do
+                    for j, action in pairs(path.actions) do
+                        action.tick = control_table[flow][k].slider_value
+                    end
                 end
             end
+            l = k .. '_label'
+            control_table[flow][l].caption = control_table[flow][k].slider_value
         end
     end
-    local k = player.name .. '_wave_difficulty'
-    if element == control_table[k] then
-        for i, path in pairs(global.paths) do
-            if path.player_name == player.name then
-                local path = global.paths[i]
-                for j, action in pairs(path.actions) do
-                    path.actions[j].tick = control_table[k].slider_value
+    
+    for index, chosen_player in pairs(game.players) do
+        local k = chosen_player.name .. '_wave_speed'
+        local flow = k .. '_flow'
+        if element == control_table[flow][k] then
+            if global.origins[chosen_player.name] and global.origins[chosen_player.name].waves then
+                for i, wave in pairs(global.origins[chosen_player.name].waves) do
+                    for j, action in pairs(wave.actions) do
+                        action.tick = control_table[flow][k].slider_value
+                    end
                 end
             end
+            l = k .. '_label'
+            control_table[flow][l].caption = control_table[flow][k].slider_value
         end
     end
-    local k = player.name .. '_wave_speed'
-    if element == control_table[k] then
-        for i, path in pairs(global.paths) do
-            if path.player_name == player.name then
-                local path = global.paths[i]
-                for j, action in pairs(path.actions) do
-                    path.actions[j].tick = control_table[k].slider_value
+    
+    -- to perform on all players:
+    
+    -- for index, online_player in pairs(game.connected_players) do
+    --     if global.origins[online_player.name] and global.origins[online_player.name].paths then
+    --         for i, path in pairs(global.origins[online_player.name].paths) do
+    --             for j, action in pairs(path.actions) do
+    --                 action.tick = control_table[k].slider_value
+    --             end
+    --         end
+    --     end
+    -- end
+    
+    -- for index, online_player in pairs(game.connected_players) do
+    --     if global.origins[online_player.name] and global.origins[online_player.name].waves then
+    --         for i, wave in pairs(global.origins[online_player.name].waves) do
+    --             for j, action in pairs(wave.actions) do
+    --                 action.tick = control_table[k].slider_value
+    --             end
+    --         end
+    --     end
+    -- end
+end
+
+local function on_gui_switch_state_changed(event)
+    local player = game.players[event.player_index]
+    local controller = global.origin_controller[player.name].controller
+    local control_table = controller['origin_control_table']
+    local element = event.element
+    
+    for index, chosen_player in pairs(game.players) do
+        local k = chosen_player.name .. '_path_switch'
+        if element == control_table[k] then
+            if element.switch_state == "left" then -- off
+                if global.origins[chosen_player.name] then
+                    if global.origins[chosen_player.name].paths then
+                        for i, path in pairs(global.origins[chosen_player.name].paths) do
+                            for j, action in pairs(path.actions) do
+                                action.tick = 2147483647
+                            end
+                        end
+                    end
+                    if global.origins[chosen_player.name].waves then
+                        for i, wave in pairs(global.origins[chosen_player.name].waves) do
+                            for j, action in pairs(wave.actions) do
+                                action.tick = 2147483647
+                            end
+                        end
+                    end
+                end
+            end
+            if element.switch_state == "right" then -- on
+                if global.origins[chosen_player.name] then
+                    if global.origins[chosen_player.name].paths then
+                        for i, path in pairs(global.origins[chosen_player.name].paths) do
+                            for j, action in pairs(path.actions) do
+                                k = chosen_player.name .. '_path_speed'
+                                action.tick = control_table[k].slider_value
+                            end
+                        end
+                    end
+                    if global.origins[chosen_player.name].waves then
+                        for i, wave in pairs(global.origins[chosen_player.name].waves) do
+                            for j, action in pairs(wave.actions) do
+                                k = chosen_player.name .. '_wave_speed'
+                                action.tick = control_table[k].slider_value
+                            end
+                        end
+                    end
                 end
             end
         end
     end
 end
-
 
 local function on_gui_click(event)
     local player = game.players[event.player_index]
@@ -294,6 +413,7 @@ origin_controls.events =
     [defines.events.on_gui_value_changed] = on_gui_value_changed,
     [defines.events.on_tick] = on_tick,
     [defines.events.on_gui_selection_state_changed] = on_gui_selection_state_changed,
+    [defines.events.on_gui_switch_state_changed] = on_gui_switch_state_changed,
     -- [defines.events.on_player_created] = on_player_created
 }
 

@@ -74,7 +74,7 @@ function PathBuilder.update(path, player_name)
         -- if no more tiles for this path, clear it from global table
         path = nil
         if config.logging then
-            game.print('Path complete. '..#global.paths..' left.')
+            game.print('Path complete. '..#global.origins[player_name].paths..' left.')
         end
     end
 end
